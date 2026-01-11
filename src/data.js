@@ -318,5 +318,141 @@ export const phrases = [
   { japanese: '傘はありますか', romaji: 'kasa wa arimasu ka', english: 'Do you have an umbrella?', type: 'phrase' }
 ];
 
+// Common Japanese vocabulary words
+export const vocabulary = [
+  // Numbers
+  { japanese: '一', romaji: 'ichi', english: 'one', type: 'vocabulary' },
+  { japanese: '二', romaji: 'ni', english: 'two', type: 'vocabulary' },
+  { japanese: '三', romaji: 'san', english: 'three', type: 'vocabulary' },
+  { japanese: '四', romaji: 'yon/shi', english: 'four', type: 'vocabulary' },
+  { japanese: '五', romaji: 'go', english: 'five', type: 'vocabulary' },
+  { japanese: '六', romaji: 'roku', english: 'six', type: 'vocabulary' },
+  { japanese: '七', romaji: 'nana/shichi', english: 'seven', type: 'vocabulary' },
+  { japanese: '八', romaji: 'hachi', english: 'eight', type: 'vocabulary' },
+  { japanese: '九', romaji: 'kyuu', english: 'nine', type: 'vocabulary' },
+  { japanese: '十', romaji: 'juu', english: 'ten', type: 'vocabulary' },
+  { japanese: '百', romaji: 'hyaku', english: 'hundred', type: 'vocabulary' },
+  { japanese: '千', romaji: 'sen', english: 'thousand', type: 'vocabulary' },
+  { japanese: '万', romaji: 'man', english: 'ten thousand', type: 'vocabulary' },
+
+  // Time
+  { japanese: '時間', romaji: 'jikan', english: 'time', type: 'vocabulary' },
+  { japanese: '朝', romaji: 'asa', english: 'morning', type: 'vocabulary' },
+  { japanese: '昼', romaji: 'hiru', english: 'noon/daytime', type: 'vocabulary' },
+  { japanese: '夜', romaji: 'yoru', english: 'night', type: 'vocabulary' },
+  { japanese: '今', romaji: 'ima', english: 'now', type: 'vocabulary' },
+  { japanese: '週', romaji: 'shuu', english: 'week', type: 'vocabulary' },
+  { japanese: '月', romaji: 'tsuki/getsu', english: 'month/moon', type: 'vocabulary' },
+  { japanese: '年', romaji: 'toshi/nen', english: 'year', type: 'vocabulary' },
+
+  // Places
+  { japanese: '駅', romaji: 'eki', english: 'station', type: 'vocabulary' },
+  { japanese: '空港', romaji: 'kuukou', english: 'airport', type: 'vocabulary' },
+  { japanese: 'ホテル', romaji: 'hoteru', english: 'hotel', type: 'vocabulary' },
+  { japanese: 'レストラン', romaji: 'resutoran', english: 'restaurant', type: 'vocabulary' },
+  { japanese: '病院', romaji: 'byouin', english: 'hospital', type: 'vocabulary' },
+  { japanese: '銀行', romaji: 'ginkou', english: 'bank', type: 'vocabulary' },
+  { japanese: '郵便局', romaji: 'yuubinkyoku', english: 'post office', type: 'vocabulary' },
+  { japanese: '店', romaji: 'mise', english: 'shop/store', type: 'vocabulary' },
+  { japanese: 'コンビニ', romaji: 'konbini', english: 'convenience store', type: 'vocabulary' },
+  { japanese: '本屋', romaji: 'honya', english: 'bookstore', type: 'vocabulary' },
+  { japanese: '薬局', romaji: 'yakkyoku', english: 'pharmacy', type: 'vocabulary' },
+  { japanese: '公園', romaji: 'kouen', english: 'park', type: 'vocabulary' },
+  { japanese: '寺', romaji: 'tera', english: 'temple', type: 'vocabulary' },
+  { japanese: '神社', romaji: 'jinja', english: 'shrine', type: 'vocabulary' },
+  { japanese: '城', romaji: 'shiro', english: 'castle', type: 'vocabulary' },
+  { japanese: '博物館', romaji: 'hakubutsukan', english: 'museum', type: 'vocabulary' },
+  { japanese: '美術館', romaji: 'bijutsukan', english: 'art museum', type: 'vocabulary' },
+  { japanese: '図書館', romaji: 'toshokan', english: 'library', type: 'vocabulary' },
+
+  // Transportation
+  { japanese: '電車', romaji: 'densha', english: 'train', type: 'vocabulary' },
+  { japanese: 'バス', romaji: 'basu', english: 'bus', type: 'vocabulary' },
+  { japanese: 'タクシー', romaji: 'takushii', english: 'taxi', type: 'vocabulary' },
+  { japanese: '地下鉄', romaji: 'chikatetsu', english: 'subway', type: 'vocabulary' },
+  { japanese: '新幹線', romaji: 'shinkansen', english: 'bullet train', type: 'vocabulary' },
+  { japanese: '飛行機', romaji: 'hikouki', english: 'airplane', type: 'vocabulary' },
+  { japanese: '自転車', romaji: 'jitensha', english: 'bicycle', type: 'vocabulary' },
+  { japanese: '車', romaji: 'kuruma', english: 'car', type: 'vocabulary' },
+  { japanese: '切符', romaji: 'kippu', english: 'ticket', type: 'vocabulary' },
+
+  // Food & Drink
+  { japanese: '水', romaji: 'mizu', english: 'water', type: 'vocabulary' },
+  { japanese: 'お茶', romaji: 'ocha', english: 'tea', type: 'vocabulary' },
+  { japanese: 'コーヒー', romaji: 'koohii', english: 'coffee', type: 'vocabulary' },
+  { japanese: 'ビール', romaji: 'biiru', english: 'beer', type: 'vocabulary' },
+  { japanese: 'ご飯', romaji: 'gohan', english: 'rice/meal', type: 'vocabulary' },
+  { japanese: 'パン', romaji: 'pan', english: 'bread', type: 'vocabulary' },
+  { japanese: '肉', romaji: 'niku', english: 'meat', type: 'vocabulary' },
+  { japanese: '魚', romaji: 'sakana', english: 'fish', type: 'vocabulary' },
+  { japanese: '野菜', romaji: 'yasai', english: 'vegetables', type: 'vocabulary' },
+  { japanese: '果物', romaji: 'kudamono', english: 'fruit', type: 'vocabulary' },
+  { japanese: '卵', romaji: 'tamago', english: 'egg', type: 'vocabulary' },
+  { japanese: '牛乳', romaji: 'gyuunyuu', english: 'milk', type: 'vocabulary' },
+  { japanese: '砂糖', romaji: 'satou', english: 'sugar', type: 'vocabulary' },
+  { japanese: '塩', romaji: 'shio', english: 'salt', type: 'vocabulary' },
+  { japanese: '醤油', romaji: 'shouyu', english: 'soy sauce', type: 'vocabulary' },
+
+  // People
+  { japanese: '人', romaji: 'hito', english: 'person', type: 'vocabulary' },
+  { japanese: '友達', romaji: 'tomodachi', english: 'friend', type: 'vocabulary' },
+  { japanese: '家族', romaji: 'kazoku', english: 'family', type: 'vocabulary' },
+  { japanese: '母', romaji: 'haha', english: 'mother', type: 'vocabulary' },
+  { japanese: '父', romaji: 'chichi', english: 'father', type: 'vocabulary' },
+  { japanese: '子供', romaji: 'kodomo', english: 'child', type: 'vocabulary' },
+  { japanese: '男', romaji: 'otoko', english: 'man', type: 'vocabulary' },
+  { japanese: '女', romaji: 'onna', english: 'woman', type: 'vocabulary' },
+  { japanese: '先生', romaji: 'sensei', english: 'teacher', type: 'vocabulary' },
+  { japanese: '学生', romaji: 'gakusei', english: 'student', type: 'vocabulary' },
+
+  // Common Objects
+  { japanese: '本', romaji: 'hon', english: 'book', type: 'vocabulary' },
+  { japanese: '新聞', romaji: 'shinbun', english: 'newspaper', type: 'vocabulary' },
+  { japanese: '雑誌', romaji: 'zasshi', english: 'magazine', type: 'vocabulary' },
+  { japanese: '携帯', romaji: 'keitai', english: 'cell phone', type: 'vocabulary' },
+  { japanese: 'カメラ', romaji: 'kamera', english: 'camera', type: 'vocabulary' },
+  { japanese: '傘', romaji: 'kasa', english: 'umbrella', type: 'vocabulary' },
+  { japanese: '鞄', romaji: 'kaban', english: 'bag', type: 'vocabulary' },
+  { japanese: '財布', romaji: 'saifu', english: 'wallet', type: 'vocabulary' },
+  { japanese: 'お金', romaji: 'okane', english: 'money', type: 'vocabulary' },
+  { japanese: 'チケット', romaji: 'chiketto', english: 'ticket', type: 'vocabulary' },
+  { japanese: '地図', romaji: 'chizu', english: 'map', type: 'vocabulary' },
+  { japanese: '鍵', romaji: 'kagi', english: 'key', type: 'vocabulary' },
+
+  // Adjectives
+  { japanese: '大きい', romaji: 'ookii', english: 'big', type: 'vocabulary' },
+  { japanese: '小さい', romaji: 'chiisai', english: 'small', type: 'vocabulary' },
+  { japanese: '高い', romaji: 'takai', english: 'expensive/tall', type: 'vocabulary' },
+  { japanese: '安い', romaji: 'yasui', english: 'cheap', type: 'vocabulary' },
+  { japanese: '新しい', romaji: 'atarashii', english: 'new', type: 'vocabulary' },
+  { japanese: '古い', romaji: 'furui', english: 'old', type: 'vocabulary' },
+  { japanese: '良い', romaji: 'yoi/ii', english: 'good', type: 'vocabulary' },
+  { japanese: '悪い', romaji: 'warui', english: 'bad', type: 'vocabulary' },
+  { japanese: '暑い', romaji: 'atsui', english: 'hot (weather)', type: 'vocabulary' },
+  { japanese: '寒い', romaji: 'samui', english: 'cold', type: 'vocabulary' },
+  { japanese: '熱い', romaji: 'atsui', english: 'hot (temperature)', type: 'vocabulary' },
+  { japanese: '冷たい', romaji: 'tsumetai', english: 'cold (touch)', type: 'vocabulary' },
+
+  // Colors
+  { japanese: '赤', romaji: 'aka', english: 'red', type: 'vocabulary' },
+  { japanese: '青', romaji: 'ao', english: 'blue', type: 'vocabulary' },
+  { japanese: '黄色', romaji: 'kiiro', english: 'yellow', type: 'vocabulary' },
+  { japanese: '緑', romaji: 'midori', english: 'green', type: 'vocabulary' },
+  { japanese: '白', romaji: 'shiro', english: 'white', type: 'vocabulary' },
+  { japanese: '黒', romaji: 'kuro', english: 'black', type: 'vocabulary' },
+
+  // Directions
+  { japanese: '右', romaji: 'migi', english: 'right', type: 'vocabulary' },
+  { japanese: '左', romaji: 'hidari', english: 'left', type: 'vocabulary' },
+  { japanese: '前', romaji: 'mae', english: 'front', type: 'vocabulary' },
+  { japanese: '後ろ', romaji: 'ushiro', english: 'back/behind', type: 'vocabulary' },
+  { japanese: '上', romaji: 'ue', english: 'up/above', type: 'vocabulary' },
+  { japanese: '下', romaji: 'shita', english: 'down/below', type: 'vocabulary' },
+  { japanese: '中', romaji: 'naka', english: 'inside', type: 'vocabulary' },
+  { japanese: '外', romaji: 'soto', english: 'outside', type: 'vocabulary' },
+  { japanese: '近い', romaji: 'chikai', english: 'near', type: 'vocabulary' },
+  { japanese: '遠い', romaji: 'tooi', english: 'far', type: 'vocabulary' }
+];
+
 // Combine all data
-export const allData = [...hiragana, ...katakana, ...phrases];
+export const allData = [...hiragana, ...katakana, ...phrases, ...vocabulary];

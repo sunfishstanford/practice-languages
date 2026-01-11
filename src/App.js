@@ -3,6 +3,7 @@ import './App.css';
 import Quiz from './components/Quiz';
 import Settings from './components/Settings';
 import History from './components/History';
+import Browse from './components/Browse';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('quiz');
@@ -11,7 +12,8 @@ function App() {
     showRomaji: true,
     includeHiragana: true,
     includeKatakana: true,
-    includePhrases: true
+    includePhrases: true,
+    includeVocabulary: true
   });
 
   // Load settings from localStorage on mount
@@ -42,6 +44,12 @@ function App() {
           Quiz
         </button>
         <button
+          className={currentPage === 'browse' ? 'active' : ''}
+          onClick={() => setCurrentPage('browse')}
+        >
+          Browse
+        </button>
+        <button
           className={currentPage === 'settings' ? 'active' : ''}
           onClick={() => setCurrentPage('settings')}
         >
@@ -57,6 +65,7 @@ function App() {
 
       <main className="App-main">
         {currentPage === 'quiz' && <Quiz settings={settings} />}
+        {currentPage === 'browse' && <Browse />}
         {currentPage === 'settings' && (
           <Settings settings={settings} updateSettings={updateSettings} />
         )}

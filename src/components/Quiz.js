@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { hiragana, katakana, phrases } from '../data';
+import { hiragana, katakana, phrases, vocabulary } from '../data';
 import './Quiz.css';
 
 function Quiz({ settings }) {
@@ -24,8 +24,11 @@ function Quiz({ settings }) {
     if (settings.includePhrases ?? true) {
       data = [...data, ...phrases];
     }
+    if (settings.includeVocabulary ?? true) {
+      data = [...data, ...vocabulary];
+    }
     return data;
-  }, [settings.includeHiragana, settings.includeKatakana, settings.includePhrases]);
+  }, [settings.includeHiragana, settings.includeKatakana, settings.includePhrases, settings.includeVocabulary]);
 
   const startNewSession = useCallback(() => {
     // Get previously incorrect questions from localStorage
@@ -251,7 +254,9 @@ function Quiz({ settings }) {
       <div className="question-card">
         {currentQuestion.item.type !== 'phrase' && (
           <div className="question-type-badge">
-            {currentQuestion.item.type === 'hiragana' ? 'Hiragana' : 'Katakana'}
+            {currentQuestion.item.type === 'hiragana' && 'Hiragana'}
+            {currentQuestion.item.type === 'katakana' && 'Katakana'}
+            {currentQuestion.item.type === 'vocabulary' && 'Vocabulary'}
           </div>
         )}
         <div className="question-text">{currentQuestion.questionText}</div>

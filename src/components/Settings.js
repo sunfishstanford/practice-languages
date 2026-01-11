@@ -9,10 +9,11 @@ function Settings({ settings, updateSettings }) {
   const [includeHiragana, setIncludeHiragana] = useState(settings.includeHiragana ?? true);
   const [includeKatakana, setIncludeKatakana] = useState(settings.includeKatakana ?? true);
   const [includePhrases, setIncludePhrases] = useState(settings.includePhrases ?? true);
+  const [includeVocabulary, setIncludeVocabulary] = useState(settings.includeVocabulary ?? true);
 
   const handleSave = () => {
     // Validate that at least one content type is selected
-    if (!includeHiragana && !includeKatakana && !includePhrases) {
+    if (!includeHiragana && !includeKatakana && !includePhrases && !includeVocabulary) {
       alert('Please select at least one content type to quiz on!');
       return;
     }
@@ -22,7 +23,8 @@ function Settings({ settings, updateSettings }) {
       showRomaji: showRomaji,
       includeHiragana: includeHiragana,
       includeKatakana: includeKatakana,
-      includePhrases: includePhrases
+      includePhrases: includePhrases,
+      includeVocabulary: includeVocabulary
     });
     alert('Settings saved!');
   };
@@ -41,12 +43,14 @@ function Settings({ settings, updateSettings }) {
       setIncludeHiragana(true);
       setIncludeKatakana(true);
       setIncludePhrases(true);
+      setIncludeVocabulary(true);
       updateSettings({
         questionsPerSession: 10,
         showRomaji: true,
         includeHiragana: true,
         includeKatakana: true,
-        includePhrases: true
+        includePhrases: true,
+        includeVocabulary: true
       });
       alert('All data has been reset!');
     }
@@ -113,6 +117,15 @@ function Settings({ settings, updateSettings }) {
               onChange={(e) => setIncludePhrases(e.target.checked)}
             />
             Japanese phrases
+          </label>
+          <label htmlFor="include-vocabulary">
+            <input
+              type="checkbox"
+              id="include-vocabulary"
+              checked={includeVocabulary}
+              onChange={(e) => setIncludeVocabulary(e.target.checked)}
+            />
+            Vocabulary words
           </label>
         </div>
       </div>
