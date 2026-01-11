@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { allData } from '../data';
+import { hiragana, katakana, phrases } from '../data';
 import './Quiz.css';
 
 function Quiz({ settings }) {
@@ -12,15 +12,34 @@ function Quiz({ settings }) {
   const [sessionComplete, setSessionComplete] = useState(false);
   const feedbackRef = useRef(null);
 
+  // Get filtered data based on settings
+  const getFilteredData = useCallback(() => {
+    let data = [];
+    if (settings.includeHiragana ?? true) {
+      data = [...data, ...hiragana];
+    }
+    if (settings.includeKatakana ?? true) {
+      data = [...data, ...katakana];
+    }
+    if (settings.includePhrases ?? true) {
+      data = [...data, ...phrases];
+    }
+    return data;
+  }, [settings.includeHiragana, settings.includeKatakana, settings.includePhrases]);
+
   const startNewSession = useCallback(() => {
     // Get previously incorrect questions from localStorage
     const savedIncorrect = localStorage.getItem('incorrectQuestions');
     const previouslyIncorrect = savedIncorrect ? JSON.parse(savedIncorrect) : [];
 
+    // Get filtered data based on settings
+    const availableData = getFilteredData();
+
     // Generate questions with emphasis on previously incorrect ones
     const newQuestions = generateQuestions(
       settings.questionsPerSession,
-      previouslyIncorrect
+      previouslyIncorrect,
+      availableData
     );
 
     setQuestions(newQuestions);
@@ -31,7 +50,7 @@ function Quiz({ settings }) {
     setIncorrectQuestions([]);
     setSessionComplete(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.questionsPerSession]);
+  }, [settings.questionsPerSession, getFilteredData]);
 
   // Initialize quiz session
   useEffect(() => {
@@ -45,30 +64,35 @@ function Quiz({ settings }) {
     }
   }, [showFeedback]);
 
-  const generateQuestions = (count, emphasizeItems) => {
+  const generateQuestions = (count, emphasizeItems, availableData) => {
     const questions = [];
     const usedIndices = new Set();
+
+    // Filter emphasized items to only include those that match current settings
+    const filteredEmphasizeItems = emphasizeItems.filter(item => {
+      return availableData.some(d => d.japanese === item.japanese && d.english === item.english);
+    });
 
     // First, add 40% from emphasized items if available
     const emphasizeCount = Math.min(
       Math.floor(count * 0.4),
-      emphasizeItems.length
+      filteredEmphasizeItems.length
     );
 
     for (let i = 0; i < emphasizeCount; i++) {
-      const item = emphasizeItems[i];
-      const question = createQuestion(item);
+      const item = filteredEmphasizeItems[i];
+      const question = createQuestion(item, availableData);
       questions.push(question);
     }
 
     // Fill the rest with random questions
-    while (questions.length < count) {
-      const randomIndex = Math.floor(Math.random() * allData.length);
+    while (questions.length < count && availableData.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableData.length);
 
       if (!usedIndices.has(randomIndex)) {
         usedIndices.add(randomIndex);
-        const item = allData[randomIndex];
-        const question = createQuestion(item);
+        const item = availableData[randomIndex];
+        const question = createQuestion(item, availableData);
         questions.push(question);
       }
     }
@@ -77,7 +101,7 @@ function Quiz({ settings }) {
     return shuffleArray(questions);
   };
 
-  const createQuestion = (item) => {
+  const createQuestion = (item, availableData) => {
     // Randomly choose Japanese->English or English->Japanese
     const isJapaneseToEnglish = Math.random() < 0.5;
 
@@ -90,7 +114,7 @@ function Quiz({ settings }) {
     };
 
     // Generate wrong answers
-    const wrongAnswers = generateWrongAnswers(item, isJapaneseToEnglish);
+    const wrongAnswers = generateWrongAnswers(item, isJapaneseToEnglish, availableData);
 
     // Combine and shuffle
     const answers = shuffleArray([
@@ -103,14 +127,14 @@ function Quiz({ settings }) {
     return question;
   };
 
-  const generateWrongAnswers = (correctItem, isJapaneseToEnglish) => {
+  const generateWrongAnswers = (correctItem, isJapaneseToEnglish, availableData) => {
     const wrongAnswers = [];
     const usedIndices = new Set();
     const targetField = isJapaneseToEnglish ? 'english' : 'japanese';
 
-    while (wrongAnswers.length < 3) {
-      const randomIndex = Math.floor(Math.random() * allData.length);
-      const randomItem = allData[randomIndex];
+    while (wrongAnswers.length < 3 && availableData.length > wrongAnswers.length) {
+      const randomIndex = Math.floor(Math.random() * availableData.length);
+      const randomItem = availableData[randomIndex];
 
       if (
         randomItem[targetField] !== correctItem[targetField] &&

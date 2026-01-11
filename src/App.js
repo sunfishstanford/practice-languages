@@ -8,7 +8,10 @@ function App() {
   const [currentPage, setCurrentPage] = useState('quiz');
   const [settings, setSettings] = useState({
     questionsPerSession: 10,
-    showRomaji: true
+    showRomaji: true,
+    includeHiragana: true,
+    includeKatakana: true,
+    includePhrases: true
   });
 
   // Load settings from localStorage on mount

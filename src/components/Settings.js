@@ -6,11 +6,23 @@ function Settings({ settings, updateSettings }) {
     settings.questionsPerSession
   );
   const [showRomaji, setShowRomaji] = useState(settings.showRomaji);
+  const [includeHiragana, setIncludeHiragana] = useState(settings.includeHiragana ?? true);
+  const [includeKatakana, setIncludeKatakana] = useState(settings.includeKatakana ?? true);
+  const [includePhrases, setIncludePhrases] = useState(settings.includePhrases ?? true);
 
   const handleSave = () => {
+    // Validate that at least one content type is selected
+    if (!includeHiragana && !includeKatakana && !includePhrases) {
+      alert('Please select at least one content type to quiz on!');
+      return;
+    }
+
     updateSettings({
       questionsPerSession: parseInt(questionsPerSession),
-      showRomaji: showRomaji
+      showRomaji: showRomaji,
+      includeHiragana: includeHiragana,
+      includeKatakana: includeKatakana,
+      includePhrases: includePhrases
     });
     alert('Settings saved!');
   };
@@ -26,9 +38,15 @@ function Settings({ settings, updateSettings }) {
       localStorage.removeItem('quizSettings');
       setQuestionsPerSession(10);
       setShowRomaji(true);
+      setIncludeHiragana(true);
+      setIncludeKatakana(true);
+      setIncludePhrases(true);
       updateSettings({
         questionsPerSession: 10,
-        showRomaji: true
+        showRomaji: true,
+        includeHiragana: true,
+        includeKatakana: true,
+        includePhrases: true
       });
       alert('All data has been reset!');
     }
@@ -64,6 +82,39 @@ function Settings({ settings, updateSettings }) {
           />
           Show Romaji pronunciation for Japanese characters
         </label>
+      </div>
+
+      <div className="setting-item">
+        <label className="setting-section-label">Quiz content types:</label>
+        <div className="checkbox-group">
+          <label htmlFor="include-hiragana">
+            <input
+              type="checkbox"
+              id="include-hiragana"
+              checked={includeHiragana}
+              onChange={(e) => setIncludeHiragana(e.target.checked)}
+            />
+            Hiragana characters
+          </label>
+          <label htmlFor="include-katakana">
+            <input
+              type="checkbox"
+              id="include-katakana"
+              checked={includeKatakana}
+              onChange={(e) => setIncludeKatakana(e.target.checked)}
+            />
+            Katakana characters
+          </label>
+          <label htmlFor="include-phrases">
+            <input
+              type="checkbox"
+              id="include-phrases"
+              checked={includePhrases}
+              onChange={(e) => setIncludePhrases(e.target.checked)}
+            />
+            Japanese phrases
+          </label>
+        </div>
       </div>
 
       <div className="settings-buttons">

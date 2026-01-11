@@ -57,6 +57,30 @@
   margin-bottom: 0;
 }
 
+.setting-section-label {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-left: 8px;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 20px;
+  color: #555;
+  font-weight: 400;
+}
+
 .settings-buttons {
   display: flex;
   flex-direction: column;
