@@ -1,5 +1,5 @@
 {
-  "name": "practice-japanese",
+  "name": "practice-languages",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -12,15 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sunfishstanford/practice-japanese.git"
+    "url": "git+https://github.com/sunfishstanford/practice-languages.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/sunfishstanford/practice-japanese/issues"
+    "url": "https://github.com/sunfishstanford/practice-languages/issues"
   },
-  "homepage": "https://sunfishstanford.github.io/practice-japanese",
+  "homepage": "https://sunfishstanford.github.io/practice-languages",
   "description": "Japanese learning quiz app for hiragana, katakana, and common phrases",
   "dependencies": {
     "react": "^19.2.3",

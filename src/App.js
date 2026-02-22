@@ -33,7 +33,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Practice Japanese</h1>
+        <h1>Practice Languages</h1>
       </header>
 
       <nav className="App-nav">

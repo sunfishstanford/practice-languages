@@ -1,4 +1,4 @@
-# Practice Japanese
+# Practice Languages
 
 A React web application for learning Japanese hiragana, katakana, and common phrases. Designed specifically for iPhone Safari with offline support.
 
@@ -26,8 +26,8 @@ A React web application for learning Japanese hiragana, katakana, and common phr
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/sunfishstanford/practice-japanese.git
-cd practice-japanese
+git clone https://github.com/sunfishstanford/practice-languages.git
+cd practice-languages
 ```
 
 2. Install dependencies:
