@@ -20,7 +20,7 @@
   "bugs": {
     "url": "https://github.com/sunfishstanford/practice-languages/issues"
   },
-  "homepage": "https://sunfishstanford.github.io/practice-languages",
+  "homepage": "https://freeenergy.blog/practice-languages",
   "description": "Japanese learning quiz app for hiragana, katakana, and common phrases",
   "dependencies": {
     "react": "^19.2.3",
