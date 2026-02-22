@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { getQuizHistory } from '../storage';
 import './History.css';
 
-function History() {
+function History({ language }) {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    loadHistory();
-  }, []);
-
-  const loadHistory = () => {
-    const savedHistory = localStorage.getItem('quizHistory');
-    if (savedHistory) {
-      const parsedHistory = JSON.parse(savedHistory);
-      // Reverse to show most recent first
-      setHistory(parsedHistory.reverse());
-    }
-  };
+    const saved = getQuizHistory(language.id);
+    setHistory([...saved].reverse());
+  }, [language.id]);
 
   const formatDate = (isoString) => {
     const date = new Date(isoString);

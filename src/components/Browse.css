@@ -143,6 +143,31 @@
   font-weight: 500;
 }
 
+.browse-audio-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease;
+}
+
+.browse-audio-btn:active {
+  background-color: #e3f2fd;
+}
+
+.kana-cell .browse-audio-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+}
+
 @media (max-width: 600px) {
   .browse-container h2 {
     font-size: 28px;

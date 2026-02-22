@@ -1,64 +1,99 @@
 import React, { useState } from 'react';
+import { resetLanguageData } from '../storage';
+import { isTTSSupported } from '../audio';
 import './Settings.css';
 
-function Settings({ settings, updateSettings }) {
+function Settings({ settings, updateSettings, language, languages, activeLanguageId, onLanguageChange }) {
   const [questionsPerSession, setQuestionsPerSession] = useState(
     settings.questionsPerSession
   );
-  const [showRomaji, setShowRomaji] = useState(settings.showRomaji);
-  const [includeHiragana, setIncludeHiragana] = useState(settings.includeHiragana ?? true);
-  const [includeKatakana, setIncludeKatakana] = useState(settings.includeKatakana ?? true);
-  const [includePhrases, setIncludePhrases] = useState(settings.includePhrases ?? true);
-  const [includeVocabulary, setIncludeVocabulary] = useState(settings.includeVocabulary ?? true);
+  const [showRomanization, setShowRomanization] = useState(settings.showRomanization ?? true);
+  const [includeListening, setIncludeListening] = useState(settings.includeListening ?? false);
+  const [enabledCategories, setEnabledCategories] = useState(() => {
+    const cats = {};
+    language.categories.forEach(cat => {
+      cats[cat.id] = settings.enabledCategories?.[cat.id] ?? true;
+    });
+    return cats;
+  });
+
+  const handleCategoryToggle = (catId, checked) => {
+    setEnabledCategories(prev => ({ ...prev, [catId]: checked }));
+  };
 
   const handleSave = () => {
-    // Validate that at least one content type is selected
-    if (!includeHiragana && !includeKatakana && !includePhrases && !includeVocabulary) {
+    const anyEnabled = Object.values(enabledCategories).some(v => v);
+    if (!anyEnabled) {
       alert('Please select at least one content type to quiz on!');
       return;
     }
 
     updateSettings({
       questionsPerSession: parseInt(questionsPerSession),
-      showRomaji: showRomaji,
-      includeHiragana: includeHiragana,
-      includeKatakana: includeKatakana,
-      includePhrases: includePhrases,
-      includeVocabulary: includeVocabulary
+      showRomanization,
+      includeListening,
+      enabledCategories
     });
     alert('Settings saved!');
   };
 
   const handleReset = () => {
     const confirmed = window.confirm(
-      'Are you sure you want to reset all data? This will clear your history and incorrect question tracking.'
+      `Are you sure you want to reset all ${language.name} data? This will clear your history and incorrect question tracking.`
     );
 
     if (confirmed) {
-      localStorage.removeItem('quizHistory');
-      localStorage.removeItem('incorrectQuestions');
-      localStorage.removeItem('quizSettings');
+      resetLanguageData(language.id);
+      const defaultCats = {};
+      language.categories.forEach(cat => {
+        defaultCats[cat.id] = true;
+      });
       setQuestionsPerSession(10);
-      setShowRomaji(true);
-      setIncludeHiragana(true);
-      setIncludeKatakana(true);
-      setIncludePhrases(true);
-      setIncludeVocabulary(true);
+      setShowRomanization(true);
+      setIncludeListening(false);
+      setEnabledCategories(defaultCats);
       updateSettings({
         questionsPerSession: 10,
-        showRomaji: true,
-        includeHiragana: true,
-        includeKatakana: true,
-        includePhrases: true,
-        includeVocabulary: true
+        showRomanization: true,
+        includeListening: false,
+        enabledCategories: defaultCats
       });
-      alert('All data has been reset!');
+      alert(`All ${language.name} data has been reset!`);
+    }
+  };
+
+  const handleLanguageSwitch = (e) => {
+    const newId = e.target.value;
+    onLanguageChange(newId);
+    // Re-initialize local state for new language
+    const newLang = languages.find(l => l.id === newId);
+    if (newLang) {
+      const cats = {};
+      newLang.categories.forEach(cat => {
+        cats[cat.id] = true;
+      });
+      setEnabledCategories(cats);
+      setShowRomanization(true);
+      setIncludeListening(false);
     }
   };
 
   return (
     <div className="settings-container">
       <h2>Settings</h2>
+
+      <div className="setting-item">
+        <label htmlFor="language-select">Language:</label>
+        <select
+          id="language-select"
+          value={activeLanguageId}
+          onChange={handleLanguageSwitch}
+        >
+          {languages.map(lang => (
+            <option key={lang.id} value={lang.id}>{lang.name}</option>
+          ))}
+        </select>
+      </div>
 
       <div className="setting-item">
         <label htmlFor="questions-count">Questions per session:</label>
@@ -76,57 +111,48 @@ function Settings({ settings, updateSettings }) {
         </select>
       </div>
 
-      <div className="setting-item">
-        <label htmlFor="show-romaji">
-          <input
-            type="checkbox"
-            id="show-romaji"
-            checked={showRomaji}
-            onChange={(e) => setShowRomaji(e.target.checked)}
-          />
-          Show Romaji pronunciation for Japanese characters
-        </label>
-      </div>
+      {language.hasRomanization && (
+        <div className="setting-item">
+          <label htmlFor="show-romanization">
+            <input
+              type="checkbox"
+              id="show-romanization"
+              checked={showRomanization}
+              onChange={(e) => setShowRomanization(e.target.checked)}
+            />
+            {language.romanizationLabel}
+          </label>
+        </div>
+      )}
+
+      {isTTSSupported() && (
+        <div className="setting-item">
+          <label htmlFor="include-listening">
+            <input
+              type="checkbox"
+              id="include-listening"
+              checked={includeListening}
+              onChange={(e) => setIncludeListening(e.target.checked)}
+            />
+            Include listening questions
+          </label>
+        </div>
+      )}
 
       <div className="setting-item">
         <label className="setting-section-label">Quiz content types:</label>
         <div className="checkbox-group">
-          <label htmlFor="include-hiragana">
-            <input
-              type="checkbox"
-              id="include-hiragana"
-              checked={includeHiragana}
-              onChange={(e) => setIncludeHiragana(e.target.checked)}
-            />
-            Hiragana characters
-          </label>
-          <label htmlFor="include-katakana">
-            <input
-              type="checkbox"
-              id="include-katakana"
-              checked={includeKatakana}
-              onChange={(e) => setIncludeKatakana(e.target.checked)}
-            />
-            Katakana characters
-          </label>
-          <label htmlFor="include-phrases">
-            <input
-              type="checkbox"
-              id="include-phrases"
-              checked={includePhrases}
-              onChange={(e) => setIncludePhrases(e.target.checked)}
-            />
-            Japanese phrases
-          </label>
-          <label htmlFor="include-vocabulary">
-            <input
-              type="checkbox"
-              id="include-vocabulary"
-              checked={includeVocabulary}
-              onChange={(e) => setIncludeVocabulary(e.target.checked)}
-            />
-            Vocabulary words
-          </label>
+          {language.categories.map(cat => (
+            <label key={cat.id} htmlFor={`include-${cat.id}`}>
+              <input
+                type="checkbox"
+                id={`include-${cat.id}`}
+                checked={enabledCategories[cat.id] ?? true}
+                onChange={(e) => handleCategoryToggle(cat.id, e.target.checked)}
+              />
+              {cat.name}
+            </label>
+          ))}
         </div>
       </div>
 
@@ -142,9 +168,9 @@ function Settings({ settings, updateSettings }) {
       <div className="settings-info">
         <h3>About</h3>
         <p>
-          This app helps you practice Japanese hiragana, katakana, and common
-          phrases. Questions you answer incorrectly will be emphasized in
-          future sessions to help you learn.
+          This app helps you practice {language.name} through interactive quizzes.
+          Questions you answer incorrectly will be emphasized in future sessions
+          to help you learn.
         </p>
         <p>
           The app works offline once loaded, so you can practice anywhere!

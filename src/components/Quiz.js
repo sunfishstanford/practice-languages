@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { hiragana, katakana, phrases, vocabulary } from '../data';
+import { speak, isTTSSupported } from '../audio';
+import { getIncorrectQuestions, saveIncorrectQuestions, getQuizHistory, saveQuizHistory } from '../storage';
 import './Quiz.css';
 
-function Quiz({ settings }) {
+function Quiz({ settings, language }) {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -12,37 +13,25 @@ function Quiz({ settings }) {
   const [sessionComplete, setSessionComplete] = useState(false);
   const feedbackRef = useRef(null);
 
-  // Get filtered data based on settings
   const getFilteredData = useCallback(() => {
     let data = [];
-    if (settings.includeHiragana ?? true) {
-      data = [...data, ...hiragana];
-    }
-    if (settings.includeKatakana ?? true) {
-      data = [...data, ...katakana];
-    }
-    if (settings.includePhrases ?? true) {
-      data = [...data, ...phrases];
-    }
-    if (settings.includeVocabulary ?? true) {
-      data = [...data, ...vocabulary];
-    }
+    language.categories.forEach(cat => {
+      if (settings.enabledCategories?.[cat.id] ?? true) {
+        data = [...data, ...cat.data];
+      }
+    });
     return data;
-  }, [settings.includeHiragana, settings.includeKatakana, settings.includePhrases, settings.includeVocabulary]);
+  }, [language, settings.enabledCategories]);
 
   const startNewSession = useCallback(() => {
-    // Get previously incorrect questions from localStorage
-    const savedIncorrect = localStorage.getItem('incorrectQuestions');
-    const previouslyIncorrect = savedIncorrect ? JSON.parse(savedIncorrect) : [];
-
-    // Get filtered data based on settings
+    const previouslyIncorrect = getIncorrectQuestions(language.id);
     const availableData = getFilteredData();
 
-    // Generate questions with emphasis on previously incorrect ones
     const newQuestions = generateQuestions(
       settings.questionsPerSession,
       previouslyIncorrect,
-      availableData
+      availableData,
+      settings.includeListening && isTTSSupported()
     );
 
     setQuestions(newQuestions);
@@ -53,30 +42,26 @@ function Quiz({ settings }) {
     setIncorrectQuestions([]);
     setSessionComplete(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.questionsPerSession, getFilteredData]);
+  }, [settings.questionsPerSession, settings.includeListening, getFilteredData, language.id]);
 
-  // Initialize quiz session
   useEffect(() => {
     startNewSession();
   }, [startNewSession]);
 
-  // Scroll to feedback when it becomes visible
   useEffect(() => {
     if (showFeedback && feedbackRef.current) {
       feedbackRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [showFeedback]);
 
-  const generateQuestions = (count, emphasizeItems, availableData) => {
+  const generateQuestions = (count, emphasizeItems, availableData, allowListening) => {
     const questions = [];
     const usedIndices = new Set();
 
-    // Filter emphasized items to only include those that match current settings
     const filteredEmphasizeItems = emphasizeItems.filter(item => {
-      return availableData.some(d => d.japanese === item.japanese && d.english === item.english);
+      return availableData.some(d => d.native === item.native && d.english === item.english);
     });
 
-    // First, add 40% from emphasized items if available
     const emphasizeCount = Math.min(
       Math.floor(count * 0.4),
       filteredEmphasizeItems.length
@@ -84,56 +69,68 @@ function Quiz({ settings }) {
 
     for (let i = 0; i < emphasizeCount; i++) {
       const item = filteredEmphasizeItems[i];
-      const question = createQuestion(item, availableData);
+      const question = createQuestion(item, availableData, allowListening);
       questions.push(question);
     }
 
-    // Fill the rest with random questions
     while (questions.length < count && availableData.length > 0) {
       const randomIndex = Math.floor(Math.random() * availableData.length);
 
       if (!usedIndices.has(randomIndex)) {
         usedIndices.add(randomIndex);
         const item = availableData[randomIndex];
-        const question = createQuestion(item, availableData);
+        const question = createQuestion(item, availableData, allowListening);
         questions.push(question);
       }
     }
 
-    // Shuffle the questions
     return shuffleArray(questions);
   };
 
-  const createQuestion = (item, availableData) => {
-    // Randomly choose Japanese->English or English->Japanese
-    const isJapaneseToEnglish = Math.random() < 0.5;
+  const createQuestion = (item, availableData, allowListening) => {
+    const rand = Math.random();
+    let direction;
+    if (allowListening && rand < 0.33) {
+      direction = 'listening';
+    } else if (rand < (allowListening ? 0.66 : 0.5)) {
+      direction = 'native-to-english';
+    } else {
+      direction = 'english-to-native';
+    }
 
-    const question = {
-      item: item,
-      type: isJapaneseToEnglish ? 'jp-to-en' : 'en-to-jp',
-      questionText: isJapaneseToEnglish ? item.japanese : item.english,
-      correctAnswer: isJapaneseToEnglish ? item.english : item.japanese,
-      romaji: item.romaji
+    let questionText, correctAnswer, targetField;
+
+    if (direction === 'listening') {
+      questionText = null; // audio-only
+      correctAnswer = item.native;
+      targetField = 'native';
+    } else if (direction === 'native-to-english') {
+      questionText = item.native;
+      correctAnswer = item.english;
+      targetField = 'english';
+    } else {
+      questionText = item.english;
+      correctAnswer = item.native;
+      targetField = 'native';
+    }
+
+    const wrongAnswers = generateWrongAnswers(item, targetField, availableData);
+
+    const answers = shuffleArray([correctAnswer, ...wrongAnswers]);
+
+    return {
+      item,
+      type: direction,
+      questionText,
+      correctAnswer,
+      romanization: item.romanization,
+      answers
     };
-
-    // Generate wrong answers
-    const wrongAnswers = generateWrongAnswers(item, isJapaneseToEnglish, availableData);
-
-    // Combine and shuffle
-    const answers = shuffleArray([
-      question.correctAnswer,
-      ...wrongAnswers
-    ]);
-
-    question.answers = answers;
-
-    return question;
   };
 
-  const generateWrongAnswers = (correctItem, isJapaneseToEnglish, availableData) => {
+  const generateWrongAnswers = (correctItem, targetField, availableData) => {
     const wrongAnswers = [];
     const usedIndices = new Set();
-    const targetField = isJapaneseToEnglish ? 'english' : 'japanese';
 
     while (wrongAnswers.length < 3 && availableData.length > wrongAnswers.length) {
       const randomIndex = Math.floor(Math.random() * availableData.length);
@@ -161,7 +158,7 @@ function Quiz({ settings }) {
   };
 
   const handleAnswerClick = (answer) => {
-    if (showFeedback) return; // Prevent changing answer after submission
+    if (showFeedback) return;
 
     setSelectedAnswer(answer);
     setShowFeedback(true);
@@ -172,7 +169,6 @@ function Quiz({ settings }) {
     if (isCorrect) {
       setScore(score + 1);
     } else {
-      // Track incorrect question
       setIncorrectQuestions([...incorrectQuestions, currentQuestion.item]);
     }
   };
@@ -183,7 +179,6 @@ function Quiz({ settings }) {
       setSelectedAnswer(null);
       setShowFeedback(false);
     } else {
-      // Session complete
       finishSession();
     }
   };
@@ -191,8 +186,7 @@ function Quiz({ settings }) {
   const finishSession = () => {
     setSessionComplete(true);
 
-    // Save score to history
-    const history = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+    const history = getQuizHistory(language.id);
     const sessionData = {
       date: new Date().toISOString(),
       score: score + (selectedAnswer === questions[currentQuestionIndex].correctAnswer ? 1 : 0),
@@ -204,14 +198,17 @@ function Quiz({ settings }) {
       )
     };
     history.push(sessionData);
-    localStorage.setItem('quizHistory', JSON.stringify(history));
+    saveQuizHistory(language.id, history);
 
-    // Update incorrect questions list
     const finalIncorrect = [...incorrectQuestions];
     if (selectedAnswer !== questions[currentQuestionIndex].correctAnswer) {
       finalIncorrect.push(questions[currentQuestionIndex].item);
     }
-    localStorage.setItem('incorrectQuestions', JSON.stringify(finalIncorrect));
+    saveIncorrectQuestions(language.id, finalIncorrect);
+  };
+
+  const handlePlayAudio = (text) => {
+    speak(text, language.speechLang).catch(() => {});
   };
 
   if (questions.length === 0) {
@@ -240,6 +237,7 @@ function Quiz({ settings }) {
 
   const currentQuestion = questions[currentQuestionIndex];
   const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+  const categoryName = language.categories.find(c => c.type === currentQuestion.item.type)?.name;
 
   return (
     <div className="quiz-container">
@@ -252,16 +250,29 @@ function Quiz({ settings }) {
       </div>
 
       <div className="question-card">
-        {currentQuestion.item.type !== 'phrase' && (
+        {categoryName && currentQuestion.item.type !== 'phrase' && (
           <div className="question-type-badge">
-            {currentQuestion.item.type === 'hiragana' && 'Hiragana'}
-            {currentQuestion.item.type === 'katakana' && 'Katakana'}
-            {currentQuestion.item.type === 'vocabulary' && 'Vocabulary'}
+            {categoryName}
           </div>
         )}
-        <div className="question-text">{currentQuestion.questionText}</div>
-        {settings.showRomaji && currentQuestion.type === 'jp-to-en' && (
-          <div className="romaji-text">({currentQuestion.romaji})</div>
+        {currentQuestion.type === 'listening' ? (
+          <div className="listening-question">
+            <button
+              className="play-audio-btn"
+              onClick={() => handlePlayAudio(currentQuestion.item.native)}
+              aria-label="Play audio"
+            >
+              &#x1f50a;
+            </button>
+            <div className="audio-hint">Tap to listen</div>
+          </div>
+        ) : (
+          <>
+            <div className="question-text">{currentQuestion.questionText}</div>
+            {settings.showRomanization && language.hasRomanization && currentQuestion.type === 'native-to-english' && (
+              <div className="romaji-text">({currentQuestion.romanization})</div>
+            )}
+          </>
         )}
       </div>
 

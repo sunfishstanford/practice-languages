@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Practice Languages is a React PWA for learning Japanese (hiragana, katakana, phrases, vocabulary) through interactive quizzes. It runs entirely client-side with localStorage persistence—no backend. Optimized for mobile/iOS with offline support via Workbox service workers. Deployed to GitHub Pages at freeenergy.blog/practice-languages.
+Practice Languages is a React PWA for learning multiple languages (Japanese, Chinese, and extensible) through interactive quizzes with text-to-speech support. It runs entirely client-side with localStorage persistence—no backend. Optimized for mobile/iOS with offline support via Workbox service workers. Deployed to GitHub Pages at freeenergy.blog/practice-languages.
 
 ## Commands
 
@@ -15,13 +15,21 @@ Practice Languages is a React PWA for learning Japanese (hiragana, katakana, phr
 
 ## Architecture
 
-**State & Data Flow**: App.js is the top-level router managing `currentPage` and `settings` state. No routing library—pages are swapped via conditional rendering. All persistence uses localStorage with three keys: `quizSettings`, `quizHistory`, `incorrectQuestions`.
+**Language Plugin System**: Each language is a self-contained file in `src/languages/` exporting a config object with `id`, `name`, `speechLang`, `hasRomanization`, `romanizationLabel`, and `categories[]`. The registry in `src/languages/index.js` exports `languageList`, `getLanguage(id)`, and `defaultLanguageId`.
 
-**Quiz Logic** (Quiz.js): 40% of questions drawn from previously incorrect items, 60% random. Direction (JP→EN or EN→JP) is randomized 50/50. Four multiple-choice options per question with immediate feedback.
+**Data Schema**: Each data item follows `{ native, romanization, english, type }` format. Categories define `renderMode` (`grid` or `list`) and grid categories include a `gridRows(items)` function for row layout.
 
-**Data** (data.js): All content lives in a single 38KB file. Each item follows `{ japanese, romaji, english, type }` format. Content types: hiragana (46), katakana (46), phrases (40+), vocabulary.
+**State & Data Flow**: App.js manages `currentPage`, `activeLanguageId`, `language` object, and `settings` state. No routing library—pages are swapped via conditional rendering.
 
-**Components**: Quiz (core learning), Browse (kana tables + phrase/vocab lists), Settings (preferences + data reset), History (session statistics).
+**Storage** (`src/storage.js`): Per-language namespaced localStorage with key format `{languageId}:{key}`. Includes migration from old un-namespaced keys to `japanese:*` prefix.
+
+**Settings Shape**: `{ questionsPerSession, showRomanization, includeListening, enabledCategories: { [catId]: boolean } }`.
+
+**Quiz Logic** (Quiz.js): 40% of questions drawn from previously incorrect items, 60% random. Three question directions: native→english, english→native, and listening (TTS). Four multiple-choice options per question with immediate feedback.
+
+**Audio** (`src/audio.js`): Web Speech API wrapper for text-to-speech. `speak(text, lang)` returns a Promise. Works offline with OS-level voices.
+
+**Components**: Quiz (core learning with listening mode), Browse (grid/list views with per-item audio), Settings (language selector, dynamic category checkboxes, audio toggle), History (per-language session statistics).
 
 **PWA**: Service worker uses Workbox with precaching for app shell and stale-while-revalidate for images (max 50 cached entries). iOS meta tags in public/index.html enable full-screen installable behavior.
 
@@ -29,4 +37,5 @@ Practice Languages is a React PWA for learning Japanese (hiragana, katakana, phr
 
 - Mobile-first CSS with minimum 20px font sizes to prevent iOS auto-zoom
 - Create React App baseline (react-scripts)—no custom webpack or ESLint config
-- Content additions go in `src/data.js` following existing `{ japanese, romaji, english, type }` structure
+- New languages go in `src/languages/` following existing schema, then register in `src/languages/index.js`
+- Content items use `{ native, romanization, english, type }` structure
