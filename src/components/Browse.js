@@ -1,19 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { speak, isTTSSupported } from '../audio';
 import './Browse.css';
 
-function Browse({ language }) {
+function Browse({ language, settings }) {
+  const visibleCategories = language.categories.filter(cat =>
+    (settings.includePhonetics && cat.phonetic) ||
+    cat.data.some(item => item.level === settings.level)
+  );
+
   const [activeCategory, setActiveCategory] = useState(language.categories[0]?.id || '');
 
+  useEffect(() => {
+    const visible = language.categories.filter(cat =>
+      (settings.includePhonetics && cat.phonetic) ||
+      cat.data.some(item => item.level === settings.level)
+    );
+    if (!visible.find(cat => cat.id === activeCategory)) {
+      setActiveCategory(visible[0]?.id || '');
+    }
+  }, [settings.level, settings.includePhonetics, language, activeCategory]);
+
   const currentCategory = language.categories.find(cat => cat.id === activeCategory);
-  const currentData = currentCategory?.data || [];
+  const currentData = currentCategory
+    ? (settings.includePhonetics && currentCategory.phonetic
+        ? currentCategory.data
+        : currentCategory.data.filter(item => item.level === settings.level))
+    : [];
 
   const handleSpeak = (text) => {
-    speak(text, language.speechLang).catch(() => {});
+    speak(text, language.speechLang, {
+      rate: language.speechRate,
+      preferredVoices: language.preferredVoices,
+    }).catch(() => {});
   };
 
   const renderGridRows = (category) => {
-    const rows = category.gridRows(category.data);
+    const filteredData = (settings.includePhonetics && category.phonetic)
+      ? category.data
+      : category.data.filter(item => item.level === settings.level);
+    const rows = category.gridRows(filteredData);
 
     return (
       <div className="kana-rows">
@@ -70,16 +95,21 @@ function Browse({ language }) {
       <h2>Browse & Learn</h2>
 
       <div className="category-tabs">
-        {language.categories.map(category => (
-          <button
-            key={category.id}
-            className={`category-tab ${activeCategory === category.id ? 'active' : ''}`}
-            onClick={() => setActiveCategory(category.id)}
-          >
-            {category.name}
-            <span className="count">({category.data.length})</span>
-          </button>
-        ))}
+        {visibleCategories.map(category => {
+          const count = (settings.includePhonetics && category.phonetic)
+            ? category.data.length
+            : category.data.filter(item => item.level === settings.level).length;
+          return (
+            <button
+              key={category.id}
+              className={`category-tab ${activeCategory === category.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(category.id)}
+            >
+              {category.name}
+              <span className="count">({count})</span>
+            </button>
+          );
+        })}
       </div>
 
       {currentCategory?.renderMode === 'grid'

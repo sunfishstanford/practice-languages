@@ -16,12 +16,15 @@ function Quiz({ settings, language }) {
   const getFilteredData = useCallback(() => {
     let data = [];
     language.categories.forEach(cat => {
-      if (settings.enabledCategories?.[cat.id] ?? true) {
+      if (settings.includePhonetics && cat.phonetic) {
         data = [...data, ...cat.data];
+      } else {
+        const filtered = cat.data.filter(item => item.level === settings.level);
+        data = [...data, ...filtered];
       }
     });
     return data;
-  }, [language, settings.enabledCategories]);
+  }, [language, settings.level, settings.includePhonetics]);
 
   const startNewSession = useCallback(() => {
     const previouslyIncorrect = getIncorrectQuestions(language.id);
@@ -189,26 +192,21 @@ function Quiz({ settings, language }) {
     const history = getQuizHistory(language.id);
     const sessionData = {
       date: new Date().toISOString(),
-      score: score + (selectedAnswer === questions[currentQuestionIndex].correctAnswer ? 1 : 0),
+      score,
       total: questions.length,
-      percentage: Math.round(
-        ((score + (selectedAnswer === questions[currentQuestionIndex].correctAnswer ? 1 : 0)) /
-          questions.length) *
-          100
-      )
+      percentage: Math.round((score / questions.length) * 100)
     };
     history.push(sessionData);
     saveQuizHistory(language.id, history);
 
-    const finalIncorrect = [...incorrectQuestions];
-    if (selectedAnswer !== questions[currentQuestionIndex].correctAnswer) {
-      finalIncorrect.push(questions[currentQuestionIndex].item);
-    }
-    saveIncorrectQuestions(language.id, finalIncorrect);
+    saveIncorrectQuestions(language.id, incorrectQuestions);
   };
 
   const handlePlayAudio = (text) => {
-    speak(text, language.speechLang).catch(() => {});
+    speak(text, language.speechLang, {
+      rate: language.speechRate,
+      preferredVoices: language.preferredVoices,
+    }).catch(() => {});
   };
 
   if (questions.length === 0) {
@@ -216,15 +214,14 @@ function Quiz({ settings, language }) {
   }
 
   if (sessionComplete) {
-    const finalScore = score + (selectedAnswer === questions[currentQuestionIndex].correctAnswer ? 1 : 0);
-    const percentage = Math.round((finalScore / questions.length) * 100);
+    const percentage = Math.round((score / questions.length) * 100);
 
     return (
       <div className="quiz-complete">
         <h2>Session Complete!</h2>
         <div className="score-display">
           <p className="score-text">
-            Score: {finalScore} / {questions.length}
+            Score: {score} / {questions.length}
           </p>
           <p className="percentage-text">{percentage}%</p>
         </div>
@@ -237,7 +234,7 @@ function Quiz({ settings, language }) {
 
   const currentQuestion = questions[currentQuestionIndex];
   const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
-  const categoryName = language.categories.find(c => c.type === currentQuestion.item.type)?.name;
+  const categoryName = language.categories.find(c => c.id === currentQuestion.item.categoryId)?.name;
 
   return (
     <div className="quiz-container">
@@ -250,7 +247,7 @@ function Quiz({ settings, language }) {
       </div>
 
       <div className="question-card">
-        {categoryName && currentQuestion.item.type !== 'phrase' && (
+        {categoryName && currentQuestion.item.categoryId !== 'phrases' && (
           <div className="question-type-badge">
             {categoryName}
           </div>
