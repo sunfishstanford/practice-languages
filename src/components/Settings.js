@@ -19,7 +19,7 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
       updateSettings({
         questionsPerSession: 10,
         showRomanization: true,
-        includeListening: false,
+        listeningMode: 'off',
         includePhonetics: false,
         level: DEFAULT_LEVEL
       });
@@ -80,15 +80,26 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
 
       {isTTSSupported() && (
         <div className="setting-item">
-          <label htmlFor="include-listening">
-            <input
-              type="checkbox"
-              id="include-listening"
-              checked={settings.includeListening ?? false}
-              onChange={(e) => update({ includeListening: e.target.checked })}
-            />
-            Include listening questions
-          </label>
+          <label className="setting-section-label">Listening questions:</label>
+          <div className="radio-group">
+            {[
+              { id: 'off', name: 'Off' },
+              { id: 'mixed', name: 'Mixed' },
+              { id: 'only', name: 'Listening only' },
+            ].map(opt => (
+              <label key={opt.id} htmlFor={`listening-${opt.id}`}>
+                <input
+                  type="radio"
+                  id={`listening-${opt.id}`}
+                  name="listeningMode"
+                  value={opt.id}
+                  checked={(settings.listeningMode ?? 'off') === opt.id}
+                  onChange={() => update({ listeningMode: opt.id })}
+                />
+                {opt.name}
+              </label>
+            ))}
+          </div>
         </div>
       )}
 

@@ -30,11 +30,12 @@ function Quiz({ settings, language }) {
     const previouslyIncorrect = getIncorrectQuestions(language.id);
     const availableData = getFilteredData();
 
+    const listeningMode = isTTSSupported() ? (settings.listeningMode ?? 'off') : 'off';
     const newQuestions = generateQuestions(
       settings.questionsPerSession,
       previouslyIncorrect,
       availableData,
-      settings.includeListening && isTTSSupported()
+      listeningMode
     );
 
     setQuestions(newQuestions);
@@ -45,7 +46,7 @@ function Quiz({ settings, language }) {
     setIncorrectQuestions([]);
     setSessionComplete(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.questionsPerSession, settings.includeListening, getFilteredData, language.id]);
+  }, [settings.questionsPerSession, settings.listeningMode, getFilteredData, language.id]);
 
   useEffect(() => {
     startNewSession();
@@ -57,7 +58,7 @@ function Quiz({ settings, language }) {
     }
   }, [showFeedback]);
 
-  const generateQuestions = (count, emphasizeItems, availableData, allowListening) => {
+  const generateQuestions = (count, emphasizeItems, availableData, listeningMode) => {
     const questions = [];
     const usedIndices = new Set();
 
@@ -72,7 +73,7 @@ function Quiz({ settings, language }) {
 
     for (let i = 0; i < emphasizeCount; i++) {
       const item = filteredEmphasizeItems[i];
-      const question = createQuestion(item, availableData, allowListening);
+      const question = createQuestion(item, availableData, listeningMode);
       questions.push(question);
     }
 
@@ -82,7 +83,7 @@ function Quiz({ settings, language }) {
       if (!usedIndices.has(randomIndex)) {
         usedIndices.add(randomIndex);
         const item = availableData[randomIndex];
-        const question = createQuestion(item, availableData, allowListening);
+        const question = createQuestion(item, availableData, listeningMode);
         questions.push(question);
       }
     }
@@ -90,12 +91,14 @@ function Quiz({ settings, language }) {
     return shuffleArray(questions);
   };
 
-  const createQuestion = (item, availableData, allowListening) => {
+  const createQuestion = (item, availableData, listeningMode) => {
     const rand = Math.random();
     let direction;
-    if (allowListening && rand < 0.33) {
+    if (listeningMode === 'only') {
       direction = 'listening';
-    } else if (rand < (allowListening ? 0.66 : 0.5)) {
+    } else if (listeningMode === 'mixed' && rand < 0.33) {
+      direction = 'listening';
+    } else if (rand < (listeningMode === 'mixed' ? 0.66 : 0.5)) {
       direction = 'native-to-english';
     } else {
       direction = 'english-to-native';

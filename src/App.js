@@ -19,7 +19,7 @@ function getDefaultSettings() {
   return {
     questionsPerSession: 10,
     showRomanization: true,
-    includeListening: false,
+    listeningMode: 'off',
     includePhonetics: false,
     level: DEFAULT_LEVEL
   };
@@ -27,12 +27,17 @@ function getDefaultSettings() {
 
 function migrateSettings(saved) {
   if (!saved) return getDefaultSettings();
+  // Migrate old includeListening boolean → listeningMode
+  if ('includeListening' in saved && !('listeningMode' in saved)) {
+    saved.listeningMode = saved.includeListening ? 'mixed' : 'off';
+    delete saved.includeListening;
+  }
   if (saved.level) return saved;
   // Old format with enabledCategories or includeHiragana — migrate to default level
   return {
     questionsPerSession: saved.questionsPerSession || 10,
     showRomanization: saved.showRomaji ?? saved.showRomanization ?? true,
-    includeListening: saved.includeListening ?? false,
+    listeningMode: saved.listeningMode ?? 'off',
     level: DEFAULT_LEVEL
   };
 }

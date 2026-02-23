@@ -25,7 +25,7 @@ Practice Languages is a React PWA for learning multiple languages (Japanese, Chi
 
 **Difficulty Levels** (`src/levels.js`): Shared constants for the level system. Exports `LEVELS` enum, `LEVEL_LIST` (for UI rendering), and `DEFAULT_LEVEL` (`'elementary'`). Filtering is non-cumulative — each level shows only its own content.
 
-**Settings Shape**: `{ questionsPerSession, showRomanization, includeListening, level }`. The `level` field is one of `'elementary'`, `'high_school'`, or `'college'`. Migrates from old `enabledCategories` format to `level: 'elementary'`.
+**Settings Shape**: `{ questionsPerSession, showRomanization, listeningMode, level }`. The `listeningMode` field is one of `'off'`, `'mixed'` (33% listening questions), or `'only'` (listening comprehension mode — 100% audio questions). The `level` field is one of `'elementary'`, `'high_school'`, or `'college'`. Migrates from old `enabledCategories` format and old `includeListening` boolean.
 
 **Quiz Logic** (Quiz.js): 40% of questions drawn from previously incorrect items, 60% random. Three question directions: native→english, english→native, and listening (TTS). Four multiple-choice options per question with immediate feedback.
 
