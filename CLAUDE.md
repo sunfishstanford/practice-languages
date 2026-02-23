@@ -35,6 +35,13 @@ Practice Languages is a React PWA for learning multiple languages (Japanese, Chi
 
 **PWA**: Service worker uses Workbox with precaching for app shell and stale-while-revalidate for images (max 50 cached entries). iOS meta tags in public/index.html enable full-screen installable behavior.
 
+## Scripts
+
+Validation and utility scripts live in `scripts/`:
+
+- `node scripts/validate-language.js [languageId]` — Validates a language file (or all languages if no id given). Checks item counts, duplicate native values, field completeness, and export. Use after modifying any language file.
+- `node scripts/count-items.js` — Quick summary table of item counts per array for every language. Use to compare language file sizes.
+
 ## Key Conventions
 
 - Mobile-first CSS with minimum 20px font sizes to prevent iOS auto-zoom
