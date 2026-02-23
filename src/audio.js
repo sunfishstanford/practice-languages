@@ -66,16 +66,17 @@ export function speak(text, lang, options = {}) {
 
     const synth = window.speechSynthesis;
 
-    // Always cancel — fixes Chrome bug where synthesis gets stuck even
-    // when speaking is false. Must stay synchronous (in user-gesture
-    // call stack) so iOS recognises the gesture.
-    synth.cancel();
+    // Only cancel if actively speaking or queued — unconditional cancel()
+    // before speak() causes iOS to silently drop the new utterance.
+    if (synth.speaking || synth.pending) {
+      synth.cancel();
+    }
 
     if (synth.paused) {
       synth.resume();
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)(text);
     utterance.lang = lang;
     utterance.rate = options.rate || 0.85;
     utterance.volume = 1; // explicit — some mobile browsers default to 0
@@ -90,7 +91,7 @@ export function speak(text, lang, options = {}) {
 
     let settled = false;
     const settle = (fn) => {
-      if (!settled) { settled = true; fn(); }
+      if (!settled) { settled = true; clearInterval(iosResumeInterval); fn(); }
     };
 
     utterance.onend = () => settle(resolve);
@@ -106,6 +107,17 @@ export function speak(text, lang, options = {}) {
     setTimeout(() => settle(resolve), 10000);
 
     synth.speak(utterance);
+
+    // iOS workaround: Safari sometimes silently pauses synthesis.
+    // Periodically calling pause()/resume() keeps it alive.
+    const iosResumeInterval = setInterval(() => {
+      if (!synth.speaking) {
+        clearInterval(iosResumeInterval);
+      } else {
+        synth.pause();
+        synth.resume();
+      }
+    }, 3000);
   });
 }
 
@@ -115,13 +127,18 @@ export function speak(text, lang, options = {}) {
 export function warmUpTTS() {
   if (!isTTSSupported()) return;
   const synth = window.speechSynthesis;
-  synth.cancel();
-  const utterance = new SpeechSynthesisUtterance('');
-  utterance.volume = 0;
-  utterance.rate = 1;
+  // Use a real character with near-zero volume. iOS ignores empty strings
+  // and zero-volume utterances, so the warmup never actually "unlocks"
+  // the synthesizer.
+  const utterance = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('.');
+  utterance.volume = 0.01;
+  utterance.rate = 2;
   synth.speak(utterance);
 }
 
 export function isTTSSupported() {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+  return typeof window !== 'undefined'
+    && 'speechSynthesis' in window
+    && (typeof window.SpeechSynthesisUtterance === 'function'
+        || typeof SpeechSynthesisUtterance === 'function');
 }

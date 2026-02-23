@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TTS Diagnostic v3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, sans-serif; padding: 16px; background: #111; color: #eee; font-size: 16px; }
+  h1 { font-size: 20px; margin-bottom: 12px; }
+  h2 { font-size: 16px; margin: 16px 0 8px; color: #8cf; }
+  .log { background: #222; border-radius: 8px; padding: 10px; margin: 8px 0; font-family: monospace; font-size: 13px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #4f4; }
+  .err { color: #f44; }
+  .warn { color: #fa4; }
+  .info { color: #8cf; }
+  button { display: block; width: 100%; padding: 14px; margin: 6px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-green { background: #16a34a; color: #fff; }
+  .btn-orange { background: #d97706; color: #fff; }
+  .btn-red { background: #dc2626; color: #fff; }
+  button:active { opacity: 0.7; }
+  .section { border: 1px solid #333; border-radius: 8px; padding: 12px; margin: 12px 0; }
+</style>
+</head>
+<body>
+<h1>TTS Diagnostic v3</h1>
+<p style="color:#999;font-size:13px;margin-bottom:8px">Focused on finding SpeechSynthesisUtterance</p>
+
+<div class="section">
+  <h2>Step 1: Deep API Scan</h2>
+  <button class="btn-primary" onclick="deepScan()">Run Deep Scan</button>
+  <div id="scanLog" class="log"></div>
+</div>
+
+<div class="section">
+  <h2>Step 2: Iframe Workaround</h2>
+  <p style="font-size:13px;color:#999;margin:4px 0">Try to get SpeechSynthesisUtterance from a fresh iframe context</p>
+  <button class="btn-orange" onclick="tryIframe()">Try Iframe Approach</button>
+  <div id="iframeLog" class="log"></div>
+</div>
+
+<div class="section">
+  <h2>Step 3: Speak via Iframe Constructor</h2>
+  <p style="font-size:13px;color:#999;margin:4px 0">If Step 2 found a constructor, this will try to use it</p>
+  <button class="btn-green" onclick="speakViaIframe('hello world', 'en-US')">Speak "hello world" (English)</button>
+  <button class="btn-green" onclick="speakViaIframe('你好世界', 'zh-CN')">Speak 你好世界 (Chinese)</button>
+  <button class="btn-green" onclick="speakViaIframe('こんにちは', 'ja-JP')">Speak こんにちは (Japanese)</button>
+  <div id="speakLog" class="log"></div>
+</div>
+
+<div class="section">
+  <h2>Step 4: Alternative Approaches</h2>
+  <p style="font-size:13px;color:#999;margin:4px 0">Other ways to create an utterance</p>
+  <button class="btn-red" onclick="tryEval()">A: eval("new SpeechSynthesisUtterance('test')")</button>
+  <button class="btn-red" onclick="tryFunction()">B: new Function approach</button>
+  <button class="btn-red" onclick="tryPrototype()">C: Check speechSynthesis prototype chain</button>
+  <button class="btn-red" onclick="tryGlobalThis()">D: globalThis.SpeechSynthesisUtterance</button>
+  <div id="altLog" class="log"></div>
+</div>
+
+<div class="section">
+  <h2>Step 5: iOS Settings Check</h2>
+  <div id="settingsLog" class="log">
+Possible iOS settings that may affect TTS:
+
+1. Settings → Accessibility → Spoken Content
+   - Check "Speak Selection" is ON
+   - Check "Speak Screen" is ON
+
+2. Settings → Siri & Search
+   - Check Siri is enabled
+
+3. Settings → Safari → Advanced
+   - Check "Advanced Tracking and Fingerprinting Protection"
+   - Try setting to OFF
+
+4. Settings → Privacy & Security
+   - Check nothing blocks speech
+
+5. Try: Settings → General → Transfer or Reset →
+   Reset → Reset All Settings (last resort)
+
+6. Is your iPhone's Silent Mode switch ON?
+   (orange visible = silent mode)
+   TTS should still work in silent mode but try toggling.
+  </div>
+</div>
+
+<div class="section">
+  <h2>Full Log</h2>
+  <button class="btn-primary" onclick="document.getElementById('fullLog').innerHTML=''">Clear</button>
+  <div id="fullLog" class="log"></div>
+</div>
+
+<script>
+// Saved iframe constructor reference
+let IframeUtterance = null;
+let iframeSynth = null;
+
+function log(id, msg, cls) {
+  const el = document.getElementById(id);
+  const full = document.getElementById('fullLog');
+  const ts = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3});
+  const text = `[${ts}] ${msg}`;
+  const line = document.createElement('div');
+  line.className = cls || '';
+  line.textContent = text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+  const line2 = line.cloneNode(true);
+  full.appendChild(line2);
+  full.scrollTop = full.scrollHeight;
+}
+
+function deepScan() {
+  const s = 'scanLog';
+  document.getElementById(s).innerHTML = '';
+
+  log(s, `UA: ${navigator.userAgent}`, 'info');
+  log(s, `iOS version: ${navigator.userAgent.match(/OS (\d+_\d+_?\d*)/)?.[1] || 'unknown'}`, 'info');
+
+  // Check speechSynthesis
+  log(s, `window.speechSynthesis: ${typeof window.speechSynthesis}`, window.speechSynthesis ? 'ok' : 'err');
+
+  // Check all possible names for the utterance constructor
+  const names = [
+    'SpeechSynthesisUtterance',
+    'webkitSpeechSynthesisUtterance',
+    'mozSpeechSynthesisUtterance',
+    'msSpeechSynthesisUtterance',
+    'oSpeechSynthesisUtterance'
+  ];
+  for (const name of names) {
+    log(s, `window.${name}: ${typeof window[name]}`, window[name] ? 'ok' : 'err');
+  }
+
+  // Enumerate ALL window properties containing "speech" (case-insensitive)
+  log(s, '', '');
+  log(s, '--- All "speech" properties on window ---', 'info');
+  let speechProps = [];
+  try {
+    // Own properties
+    const ownProps = Object.getOwnPropertyNames(window).filter(
+      p => p.toLowerCase().includes('speech')
+    );
+    speechProps = speechProps.concat(ownProps);
+  } catch(e) {
+    log(s, `getOwnPropertyNames error: ${e.message}`, 'err');
+  }
+
+  // Also try for..in which catches inherited properties
+  try {
+    for (let p in window) {
+      if (p.toLowerCase().includes('speech') && !speechProps.includes(p)) {
+        speechProps.push(p);
+      }
+    }
+  } catch(e) {}
+
+  if (speechProps.length === 0) {
+    log(s, 'No "speech" properties found on window!', 'err');
+  } else {
+    for (const p of speechProps) {
+      try {
+        log(s, `  ${p}: ${typeof window[p]} = ${String(window[p]).substring(0, 80)}`, 'info');
+      } catch(e) {
+        log(s, `  ${p}: (error reading: ${e.message})`, 'warn');
+      }
+    }
+  }
+
+  // Enumerate ALL window properties containing "utterance" (case-insensitive)
+  log(s, '', '');
+  log(s, '--- All "utterance" properties on window ---', 'info');
+  let uttProps = [];
+  try {
+    uttProps = Object.getOwnPropertyNames(window).filter(
+      p => p.toLowerCase().includes('utterance')
+    );
+  } catch(e) {}
+  if (uttProps.length === 0) {
+    log(s, 'No "utterance" properties found on window!', 'err');
+  } else {
+    for (const p of uttProps) {
+      log(s, `  ${p}: ${typeof window[p]}`, 'info');
+    }
+  }
+
+  // Check speechSynthesis object itself
+  log(s, '', '');
+  log(s, '--- speechSynthesis object details ---', 'info');
+  if (window.speechSynthesis) {
+    const synth = window.speechSynthesis;
+    log(s, `constructor.name: ${synth.constructor?.name || 'N/A'}`, 'info');
+    log(s, `toString: ${synth.toString()}`, 'info');
+    try {
+      const proto = Object.getPrototypeOf(synth);
+      const protoProps = Object.getOwnPropertyNames(proto);
+      log(s, `prototype methods: ${protoProps.join(', ')}`, 'info');
+    } catch(e) {
+      log(s, `prototype error: ${e.message}`, 'warn');
+    }
+
+    const voices = synth.getVoices();
+    log(s, `voices count: ${voices.length}`, voices.length > 0 ? 'ok' : 'warn');
+
+    // Check if we can find SpeechSynthesisUtterance via a voice object
+    if (voices.length > 0) {
+      const v = voices[0];
+      log(s, `voice[0] constructor: ${v.constructor?.name || 'N/A'}`, 'info');
+    }
+  }
+
+  // Check SpeechSynthesisEvent
+  log(s, '', '');
+  log(s, '--- Other Speech API classes ---', 'info');
+  log(s, `SpeechSynthesisEvent: ${typeof window.SpeechSynthesisEvent}`, typeof window.SpeechSynthesisEvent !== 'undefined' ? 'ok' : 'warn');
+  log(s, `SpeechSynthesisVoice: ${typeof window.SpeechSynthesisVoice}`, typeof window.SpeechSynthesisVoice !== 'undefined' ? 'ok' : 'warn');
+  log(s, `SpeechSynthesis: ${typeof window.SpeechSynthesis}`, typeof window.SpeechSynthesis !== 'undefined' ? 'ok' : 'warn');
+
+  // Check Lockdown Mode or other restrictions
+  log(s, '', '');
+  log(s, '--- Security/Privacy context ---', 'info');
+  log(s, `isSecureContext: ${window.isSecureContext}`, window.isSecureContext ? 'ok' : 'warn');
+  log(s, `protocol: ${location.protocol}`, 'info');
+  log(s, `crossOriginIsolated: ${window.crossOriginIsolated}`, 'info');
+}
+
+function tryIframe() {
+  const s = 'iframeLog';
+  document.getElementById(s).innerHTML = '';
+
+  log(s, 'Creating hidden iframe...', 'info');
+
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.sandbox = ''; // no sandbox restrictions... actually let's not set sandbox
+    document.body.appendChild(iframe);
+
+    const iframeWin = iframe.contentWindow;
+    log(s, `iframe.contentWindow exists: ${!!iframeWin}`, iframeWin ? 'ok' : 'err');
+
+    if (iframeWin) {
+      log(s, `iframe speechSynthesis: ${typeof iframeWin.speechSynthesis}`, iframeWin.speechSynthesis ? 'ok' : 'err');
+      log(s, `iframe SpeechSynthesisUtterance: ${typeof iframeWin.SpeechSynthesisUtterance}`, typeof iframeWin.SpeechSynthesisUtterance === 'function' ? 'ok' : 'err');
+
+      if (typeof iframeWin.SpeechSynthesisUtterance === 'function') {
+        IframeUtterance = iframeWin.SpeechSynthesisUtterance;
+        iframeSynth = iframeWin.speechSynthesis || window.speechSynthesis;
+        log(s, 'SUCCESS: Got SpeechSynthesisUtterance from iframe!', 'ok');
+
+        // Try creating one
+        try {
+          const testU = new IframeUtterance('test');
+          log(s, `Created utterance: text="${testU.text}"`, 'ok');
+        } catch(e) {
+          log(s, `Constructor works but instantiation failed: ${e.message}`, 'err');
+        }
+      } else {
+        log(s, 'Iframe also missing SpeechSynthesisUtterance', 'err');
+
+        // Enumerate iframe speech properties
+        let iframeSpeechProps = [];
+        try {
+          iframeSpeechProps = Object.getOwnPropertyNames(iframeWin).filter(
+            p => p.toLowerCase().includes('speech')
+          );
+        } catch(e) {
+          log(s, `Cannot enumerate iframe properties: ${e.message}`, 'warn');
+        }
+        log(s, `Iframe "speech" props: ${iframeSpeechProps.join(', ') || 'none'}`, 'info');
+      }
+    }
+
+    // Don't remove the iframe - keep it for later use
+  } catch(e) {
+    log(s, `Iframe approach failed: ${e.name}: ${e.message}`, 'err');
+  }
+
+  // Also try about:blank iframe
+  log(s, '', '');
+  log(s, 'Trying about:blank iframe...', 'info');
+  try {
+    const iframe2 = document.createElement('iframe');
+    iframe2.src = 'about:blank';
+    iframe2.style.display = 'none';
+    document.body.appendChild(iframe2);
+
+    // Need to wait for load
+    iframe2.onload = function() {
+      const win2 = iframe2.contentWindow;
+      log(s, `about:blank SpeechSynthesisUtterance: ${typeof win2.SpeechSynthesisUtterance}`, typeof win2.SpeechSynthesisUtterance === 'function' ? 'ok' : 'err');
+      if (typeof win2.SpeechSynthesisUtterance === 'function' && !IframeUtterance) {
+        IframeUtterance = win2.SpeechSynthesisUtterance;
+        log(s, 'SUCCESS: Got it from about:blank iframe!', 'ok');
+      }
+    };
+  } catch(e) {
+    log(s, `about:blank failed: ${e.message}`, 'err');
+  }
+}
+
+function speakViaIframe(text, lang) {
+  const s = 'speakLog';
+
+  log(s, `Attempting to speak: "${text}" (${lang})`, 'info');
+
+  // Method 1: Use iframe constructor if available
+  if (IframeUtterance) {
+    log(s, 'Using iframe constructor...', 'info');
+    try {
+      const synth = window.speechSynthesis;
+      const u = new IframeUtterance(text);
+      u.lang = lang;
+      u.rate = 0.85;
+      u.volume = 1;
+
+      // Try to set a voice
+      const voices = synth.getVoices();
+      const prefix = lang.split('-')[0];
+      const voice = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(prefix));
+      if (voice) {
+        u.voice = voice;
+        log(s, `  voice: ${voice.name} (${voice.lang})`, 'info');
+      }
+
+      u.onstart = () => log(s, '  ✓ onstart', 'ok');
+      u.onend = () => log(s, '  ✓ onend - SUCCESS', 'ok');
+      u.onerror = (e) => log(s, `  ✗ onerror: ${e.error}`, 'err');
+
+      synth.speak(u);
+      log(s, `  speak() called, speaking=${synth.speaking}, pending=${synth.pending}`, 'info');
+      window.__lastU = u;
+      return;
+    } catch(e) {
+      log(s, `  Iframe constructor failed: ${e.message}`, 'err');
+    }
+  }
+
+  // Method 2: Try window constructor
+  try {
+    const Ctor = window.SpeechSynthesisUtterance;
+    if (Ctor) {
+      log(s, 'Using window constructor...', 'info');
+      const u = new Ctor(text);
+      u.lang = lang;
+      u.volume = 1;
+      u.onstart = () => log(s, '  ✓ onstart', 'ok');
+      u.onend = () => log(s, '  ✓ onend', 'ok');
+      u.onerror = (e) => log(s, `  ✗ onerror: ${e.error}`, 'err');
+      window.speechSynthesis.speak(u);
+      window.__lastU = u;
+      return;
+    }
+  } catch(e) {}
+
+  log(s, 'No constructor available! Run Step 2 first, or check Step 5.', 'err');
+}
+
+function tryEval() {
+  const s = 'altLog';
+  log(s, 'Trying eval...', 'info');
+  try {
+    const u = eval("new SpeechSynthesisUtterance('eval test')");
+    log(s, `eval worked! text=${u.text}`, 'ok');
+    u.lang = 'en-US';
+    u.volume = 1;
+    u.onstart = () => log(s, '  ✓ onstart', 'ok');
+    u.onend = () => log(s, '  ✓ onend', 'ok');
+    u.onerror = (e) => log(s, `  ✗ onerror: ${e.error}`, 'err');
+    window.speechSynthesis.speak(u);
+    window.__lastU = u;
+  } catch(e) {
+    log(s, `eval failed: ${e.name}: ${e.message}`, 'err');
+  }
+}
+
+function tryFunction() {
+  const s = 'altLog';
+  log(s, 'Trying new Function...', 'info');
+  try {
+    const factory = new Function("text", "return new SpeechSynthesisUtterance(text)");
+    const u = factory('function test');
+    log(s, `new Function worked! text=${u.text}`, 'ok');
+    u.lang = 'en-US';
+    u.volume = 1;
+    u.onstart = () => log(s, '  ✓ onstart', 'ok');
+    u.onend = () => log(s, '  ✓ onend', 'ok');
+    u.onerror = (e) => log(s, `  ✗ onerror: ${e.error}`, 'err');
+    window.speechSynthesis.speak(u);
+    window.__lastU = u;
+  } catch(e) {
+    log(s, `new Function failed: ${e.name}: ${e.message}`, 'err');
+  }
+}
+
+function tryPrototype() {
+  const s = 'altLog';
+  log(s, 'Checking prototype chain...', 'info');
+
+  if (!window.speechSynthesis) {
+    log(s, 'No speechSynthesis', 'err');
+    return;
+  }
+
+  const synth = window.speechSynthesis;
+
+  // Get the SpeechSynthesis constructor
+  const SynthCtor = synth.constructor;
+  log(s, `speechSynthesis.constructor: ${SynthCtor?.name || SynthCtor}`, 'info');
+
+  // Check if SpeechSynthesis is on window
+  log(s, `window.SpeechSynthesis: ${typeof window.SpeechSynthesis}`, 'info');
+
+  // Try to find related classes
+  if (window.SpeechSynthesis) {
+    try {
+      const synthProto = window.SpeechSynthesis.prototype;
+      log(s, `SpeechSynthesis.prototype methods: ${Object.getOwnPropertyNames(synthProto).join(', ')}`, 'info');
+    } catch(e) {}
+  }
+
+  // Check if voice objects reveal anything
+  const voices = synth.getVoices();
+  if (voices.length > 0) {
+    const v = voices[0];
+    log(s, `Voice constructor: ${v.constructor?.name}`, 'info');
+    log(s, `window.SpeechSynthesisVoice: ${typeof window.SpeechSynthesisVoice}`, 'info');
+  }
+
+  // Last resort: enumerate ALL constructors/classes on window
+  log(s, '', '');
+  log(s, 'Searching all window properties for "Synth" or "Utter"...', 'info');
+  try {
+    const allProps = Object.getOwnPropertyNames(window);
+    const matches = allProps.filter(p =>
+      p.includes('Synth') || p.includes('synth') ||
+      p.includes('Utter') || p.includes('utter')
+    );
+    if (matches.length > 0) {
+      for (const m of matches) {
+        log(s, `  ${m}: ${typeof window[m]}`, 'info');
+      }
+    } else {
+      log(s, '  No matches found!', 'err');
+    }
+  } catch(e) {
+    log(s, `  Error: ${e.message}`, 'err');
+  }
+}
+
+function tryGlobalThis() {
+  const s = 'altLog';
+  log(s, 'Trying globalThis...', 'info');
+  try {
+    log(s, `globalThis === window: ${globalThis === window}`, 'info');
+    log(s, `globalThis.SpeechSynthesisUtterance: ${typeof globalThis.SpeechSynthesisUtterance}`, typeof globalThis.SpeechSynthesisUtterance === 'function' ? 'ok' : 'err');
+    log(s, `globalThis.speechSynthesis: ${typeof globalThis.speechSynthesis}`, typeof globalThis.speechSynthesis !== 'undefined' ? 'ok' : 'err');
+
+    if (typeof globalThis.SpeechSynthesisUtterance === 'function') {
+      const u = new globalThis.SpeechSynthesisUtterance('globalThis test');
+      log(s, `globalThis constructor works! text=${u.text}`, 'ok');
+    }
+  } catch(e) {
+    log(s, `globalThis failed: ${e.name}: ${e.message}`, 'err');
+  }
+
+  // Also try self
+  log(s, '', '');
+  log(s, 'Trying self...', 'info');
+  try {
+    log(s, `self.SpeechSynthesisUtterance: ${typeof self.SpeechSynthesisUtterance}`, typeof self.SpeechSynthesisUtterance === 'function' ? 'ok' : 'err');
+  } catch(e) {
+    log(s, `self failed: ${e.message}`, 'err');
+  }
+}
+
+// Auto-run on load
+window.addEventListener('load', () => {
+  log('fullLog', 'Page loaded - TTS Diagnostic v3', 'info');
+  log('fullLog', `UA: ${navigator.userAgent}`, 'info');
+});
+</script>
+</body>
+</html>
