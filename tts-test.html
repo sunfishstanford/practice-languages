@@ -135,7 +135,21 @@ function checkEnv() {
     const v = speechSynthesis.getVoices();
     slog(s, `getVoices() count: ${v.length}`, v.length > 0 ? 'ok' : 'warn');
   }
-  slog(s, `SpeechSynthesisUtterance exists: ${typeof SpeechSynthesisUtterance !== 'undefined'}`, typeof SpeechSynthesisUtterance !== 'undefined' ? 'ok' : 'err');
+  slog(s, `SpeechSynthesisUtterance (bare): ${typeof SpeechSynthesisUtterance !== 'undefined'}`, typeof SpeechSynthesisUtterance !== 'undefined' ? 'ok' : 'err');
+  slog(s, `window.SpeechSynthesisUtterance: ${typeof window.SpeechSynthesisUtterance}`, typeof window.SpeechSynthesisUtterance === 'function' ? 'ok' : 'err');
+  slog(s, `'SpeechSynthesisUtterance' in window: ${'SpeechSynthesisUtterance' in window}`, 'SpeechSynthesisUtterance' in window ? 'ok' : 'err');
+  // Try to actually create one
+  try {
+    const testU = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('test');
+    slog(s, `Constructor works: true (${testU.text})`, 'ok');
+  } catch(e) {
+    slog(s, `Constructor failed: ${e.name}: ${e.message}`, 'err');
+  }
+  // Check if accessible via webkitSpeechSynthesisUtterance
+  slog(s, `webkitSpeechSynthesisUtterance: ${typeof window.webkitSpeechSynthesisUtterance}`, typeof window.webkitSpeechSynthesisUtterance !== 'undefined' ? 'ok' : 'warn');
+  // Check if running as PWA standalone
+  slog(s, `display-mode standalone: ${window.matchMedia('(display-mode: standalone)').matches}`, 'info');
+  slog(s, `navigator.standalone (iOS): ${navigator.standalone}`, 'info');
 }
 
 function listVoices() {
@@ -178,7 +192,14 @@ function doSpeak(text, lang, label, sectionId, opts = {}) {
   }
 
   function doUtterance() {
-    const u = new SpeechSynthesisUtterance(text);
+    let u;
+    try {
+      const Ctor = window.SpeechSynthesisUtterance || SpeechSynthesisUtterance;
+      u = new Ctor(text);
+    } catch(e) {
+      slog(s, `  ✗ Failed to create utterance: ${e.name}: ${e.message}`, 'err');
+      return;
+    }
     u.lang = lang;
     u.rate = opts.rate || 0.85;
     u.volume = opts.volume !== undefined ? opts.volume : 1;
@@ -261,7 +282,7 @@ function warmupEmpty() {
   slog(s, 'Warmup: empty string, vol=0', 'info');
   const synth = speechSynthesis;
   synth.cancel();
-  const u = new SpeechSynthesisUtterance('');
+  const u = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('');
   u.volume = 0;
   u.rate = 1;
   u.onstart = () => slog(s, '  warmup onstart', 'ok');
@@ -275,7 +296,7 @@ function warmupSpace() {
   slog(s, 'Warmup: space " ", vol=0', 'info');
   const synth = speechSynthesis;
   synth.cancel();
-  const u = new SpeechSynthesisUtterance(' ');
+  const u = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)(' ');
   u.volume = 0;
   u.rate = 1;
   u.onstart = () => slog(s, '  warmup onstart', 'ok');
@@ -289,7 +310,7 @@ function warmupDot() {
   slog(s, 'Warmup: dot ".", vol=0.01', 'info');
   const synth = speechSynthesis;
   synth.cancel();
-  const u = new SpeechSynthesisUtterance('.');
+  const u = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('.');
   u.volume = 0.01;
   u.rate = 1;
   u.onstart = () => slog(s, '  warmup onstart', 'ok');
@@ -303,7 +324,7 @@ function warmupReal() {
   slog(s, 'Warmup: "a", vol=0.01', 'info');
   const synth = speechSynthesis;
   synth.cancel();
-  const u = new SpeechSynthesisUtterance('a');
+  const u = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('a');
   u.volume = 0.01;
   u.rate = 1;
   u.onstart = () => slog(s, '  warmup onstart', 'ok');
@@ -323,7 +344,7 @@ function testDirectGesture() {
   slog(s, 'Direct gesture test', 'info');
   const synth = speechSynthesis;
   synth.cancel();
-  const u = new SpeechSynthesisUtterance('direct gesture');
+  const u = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('direct gesture');
   u.lang = 'en-US';
   u.volume = 1;
   u.rate = 0.85;
@@ -339,7 +360,7 @@ function testDelayedGesture() {
   setTimeout(() => {
     const synth = speechSynthesis;
     synth.cancel();
-    const u = new SpeechSynthesisUtterance('delayed gesture');
+    const u = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('delayed gesture');
     u.lang = 'en-US';
     u.volume = 1;
     u.rate = 0.85;
@@ -356,7 +377,7 @@ function testPromiseGesture() {
   Promise.resolve().then(() => {
     const synth = speechSynthesis;
     synth.cancel();
-    const u = new SpeechSynthesisUtterance('promise gesture');
+    const u = new (window.SpeechSynthesisUtterance || SpeechSynthesisUtterance)('promise gesture');
     u.lang = 'en-US';
     u.volume = 1;
     u.rate = 0.85;
