@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>TTS Diagnostic</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, sans-serif; padding: 16px; background: #111; color: #eee; font-size: 16px; }
+  h1 { font-size: 20px; margin-bottom: 12px; }
+  h2 { font-size: 16px; margin: 16px 0 8px; color: #8cf; }
+  .log { background: #222; border-radius: 8px; padding: 10px; margin: 8px 0; font-family: monospace; font-size: 13px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+  .log .ok { color: #4f4; }
+  .log .err { color: #f44; }
+  .log .warn { color: #fa4; }
+  .log .info { color: #8cf; }
+  button { display: block; width: 100%; padding: 14px; margin: 6px 0; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-green { background: #16a34a; color: #fff; }
+  .btn-orange { background: #d97706; color: #fff; }
+  .btn-red { background: #dc2626; color: #fff; }
+  .btn-purple { background: #7c3aed; color: #fff; }
+  button:active { opacity: 0.7; }
+  .voices { background: #222; border-radius: 8px; padding: 10px; margin: 8px 0; font-size: 12px; max-height: 200px; overflow-y: auto; }
+  .section { border: 1px solid #333; border-radius: 8px; padding: 12px; margin: 12px 0; }
+  .status { padding: 4px 8px; border-radius: 4px; display: inline-block; margin: 2px; font-size: 13px; }
+  .status-ok { background: #16a34a; }
+  .status-fail { background: #dc2626; }
+  .status-unknown { background: #555; }
+</style>
+</head>
+<body>
+<h1>TTS Diagnostic for iOS</h1>
+<div id="env"></div>
+<div id="mainLog" class="log"></div>
+
+<div class="section">
+  <h2>Step 1: Environment</h2>
+  <button class="btn-primary" onclick="checkEnv()">Check Environment</button>
+  <div id="envLog" class="log" style="display:none"></div>
+</div>
+
+<div class="section">
+  <h2>Step 2: Voices</h2>
+  <button class="btn-primary" onclick="listVoices()">List Available Voices</button>
+  <div id="voicesLog" class="log" style="display:none"></div>
+</div>
+
+<div class="section">
+  <h2>Step 3: Basic TTS (English)</h2>
+  <p style="font-size:13px;color:#999;margin:4px 0">Each button tests a different approach. Tap and listen.</p>
+  <button class="btn-green" onclick="testBasicSpeak()">A: Simple speak("hello")</button>
+  <button class="btn-green" onclick="testSpeakNoCancel()">B: Speak without cancel() first</button>
+  <button class="btn-green" onclick="testSpeakDelayAfterCancel()">C: Cancel → 100ms delay → speak</button>
+  <button class="btn-green" onclick="testSpeakResumeFirst()">D: Resume → speak (no cancel)</button>
+  <div id="basicLog" class="log" style="display:none"></div>
+</div>
+
+<div class="section">
+  <h2>Step 4: Chinese TTS</h2>
+  <button class="btn-orange" onclick="testChineseSpeak()">A: Speak 你好 (zh-CN)</button>
+  <button class="btn-orange" onclick="testChineseSpeakWithVoice()">B: Speak 你好 with explicit voice</button>
+  <button class="btn-orange" onclick="testChineseNoCancel()">C: Speak 你好 without cancel()</button>
+  <div id="chineseLog" class="log" style="display:none"></div>
+</div>
+
+<div class="section">
+  <h2>Step 5: Warmup Strategies</h2>
+  <p style="font-size:13px;color:#999;margin:4px 0">Tap a warmup, then tap the "Speak after warmup" button.</p>
+  <button class="btn-purple" onclick="warmupEmpty()">Warmup: empty string, vol=0</button>
+  <button class="btn-purple" onclick="warmupSpace()">Warmup: space " ", vol=0</button>
+  <button class="btn-purple" onclick="warmupDot()">Warmup: dot ".", vol=0.01</button>
+  <button class="btn-purple" onclick="warmupReal()">Warmup: "a", vol=0.01</button>
+  <button class="btn-green" onclick="speakAfterWarmup()">→ Speak "hello" after warmup</button>
+  <div id="warmupLog" class="log" style="display:none"></div>
+</div>
+
+<div class="section">
+  <h2>Step 6: User Gesture Test</h2>
+  <p style="font-size:13px;color:#999;margin:4px 0">Tests if speak works when called directly in a tap handler vs after a timeout.</p>
+  <button class="btn-red" onclick="testDirectGesture()">A: Speak directly in onclick</button>
+  <button class="btn-red" onclick="testDelayedGesture()">B: Speak via setTimeout(0) in onclick</button>
+  <button class="btn-red" onclick="testPromiseGesture()">C: Speak via Promise.resolve() in onclick</button>
+  <div id="gestureLog" class="log" style="display:none"></div>
+</div>
+
+<div class="section">
+  <h2>Full Event Log</h2>
+  <button class="btn-primary" onclick="clearLog()">Clear Log</button>
+  <div id="fullLog" class="log"></div>
+</div>
+
+<script>
+const fullLog = document.getElementById('fullLog');
+let logCounter = 0;
+
+function log(msg, cls) {
+  const el = document.getElementById('fullLog');
+  const ts = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3});
+  const line = document.createElement('div');
+  line.className = cls || '';
+  line.textContent = `[${ts}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+  // Also show in section logs
+  return line;
+}
+
+function slog(sectionId, msg, cls) {
+  const el = document.getElementById(sectionId);
+  el.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = cls || '';
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+  log(msg, cls);
+}
+
+function clearLog() {
+  fullLog.innerHTML = '';
+  log('Log cleared', 'info');
+}
+
+function checkEnv() {
+  const s = 'envLog';
+  document.getElementById(s).innerHTML = '';
+  slog(s, `UA: ${navigator.userAgent}`, 'info');
+  slog(s, `Platform: ${navigator.platform}`, 'info');
+  slog(s, `speechSynthesis exists: ${!!window.speechSynthesis}`, window.speechSynthesis ? 'ok' : 'err');
+  if (window.speechSynthesis) {
+    slog(s, `speaking: ${speechSynthesis.speaking}`, 'info');
+    slog(s, `paused: ${speechSynthesis.paused}`, 'info');
+    slog(s, `pending: ${speechSynthesis.pending}`, 'info');
+    const v = speechSynthesis.getVoices();
+    slog(s, `getVoices() count: ${v.length}`, v.length > 0 ? 'ok' : 'warn');
+  }
+  slog(s, `SpeechSynthesisUtterance exists: ${typeof SpeechSynthesisUtterance !== 'undefined'}`, typeof SpeechSynthesisUtterance !== 'undefined' ? 'ok' : 'err');
+}
+
+function listVoices() {
+  const s = 'voicesLog';
+  document.getElementById(s).innerHTML = '';
+  if (!window.speechSynthesis) {
+    slog(s, 'speechSynthesis not available!', 'err');
+    return;
+  }
+  const voices = speechSynthesis.getVoices();
+  slog(s, `Total voices: ${voices.length}`, voices.length > 0 ? 'ok' : 'warn');
+  const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+  slog(s, `Chinese voices: ${zhVoices.length}`, zhVoices.length > 0 ? 'ok' : 'warn');
+  zhVoices.forEach(v => {
+    slog(s, `  ${v.name} (${v.lang}) local=${v.localService}`, 'info');
+  });
+  const enVoices = voices.filter(v => v.lang.startsWith('en'));
+  slog(s, `English voices: ${enVoices.length}`, 'info');
+  enVoices.slice(0, 5).forEach(v => {
+    slog(s, `  ${v.name} (${v.lang}) local=${v.localService}`, 'info');
+  });
+  if (enVoices.length > 5) slog(s, `  ... and ${enVoices.length - 5} more`, 'info');
+}
+
+function doSpeak(text, lang, label, sectionId, opts = {}) {
+  const s = sectionId;
+  const synth = window.speechSynthesis;
+  if (!synth) { slog(s, `${label}: no speechSynthesis`, 'err'); return; }
+
+  slog(s, `${label}: starting...`, 'info');
+  slog(s, `  synth state: speaking=${synth.speaking} paused=${synth.paused} pending=${synth.pending}`, 'info');
+
+  if (opts.cancel !== false) {
+    synth.cancel();
+    slog(s, `  called cancel()`, 'info');
+  }
+  if (opts.resume) {
+    synth.resume();
+    slog(s, `  called resume()`, 'info');
+  }
+
+  function doUtterance() {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    u.rate = opts.rate || 0.85;
+    u.volume = opts.volume !== undefined ? opts.volume : 1;
+
+    if (opts.voiceName) {
+      const voices = synth.getVoices();
+      const match = voices.find(v => v.name.includes(opts.voiceName));
+      if (match) {
+        u.voice = match;
+        slog(s, `  using voice: ${match.name}`, 'info');
+      } else {
+        slog(s, `  voice "${opts.voiceName}" not found`, 'warn');
+      }
+    } else if (opts.autoVoice !== false) {
+      const voices = synth.getVoices();
+      const prefix = lang.split('-')[0];
+      const match = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(prefix));
+      if (match) {
+        u.voice = match;
+        slog(s, `  auto voice: ${match.name} (${match.lang})`, 'info');
+      } else {
+        slog(s, `  no matching voice for ${lang}`, 'warn');
+      }
+    }
+
+    u.onstart = () => slog(s, `  ✓ onstart fired`, 'ok');
+    u.onend = () => slog(s, `  ✓ onend fired`, 'ok');
+    u.onerror = (e) => slog(s, `  ✗ onerror: ${e.error} (${e.message || ''})`, 'err');
+    u.onpause = () => slog(s, `  onpause fired`, 'warn');
+    u.onresume = () => slog(s, `  onresume fired`, 'info');
+    u.onboundary = () => {}; // ignore boundary events
+
+    synth.speak(u);
+    slog(s, `  called speak()`, 'info');
+    slog(s, `  synth after speak: speaking=${synth.speaking} paused=${synth.paused} pending=${synth.pending}`, 'info');
+
+    // Keep reference to prevent GC
+    window.__lastUtterance = u;
+  }
+
+  if (opts.delay) {
+    setTimeout(doUtterance, opts.delay);
+    slog(s, `  waiting ${opts.delay}ms before speak...`, 'info');
+  } else {
+    doUtterance();
+  }
+}
+
+// --- Step 3: Basic English ---
+function testBasicSpeak() {
+  doSpeak('hello, this is a test', 'en-US', 'Basic speak', 'basicLog');
+}
+function testSpeakNoCancel() {
+  doSpeak('hello without cancel', 'en-US', 'No cancel', 'basicLog', { cancel: false });
+}
+function testSpeakDelayAfterCancel() {
+  doSpeak('hello with delay', 'en-US', 'Cancel+delay', 'basicLog', { delay: 100 });
+}
+function testSpeakResumeFirst() {
+  doSpeak('hello with resume', 'en-US', 'Resume first', 'basicLog', { cancel: false, resume: true });
+}
+
+// --- Step 4: Chinese ---
+function testChineseSpeak() {
+  doSpeak('你好', 'zh-CN', 'Chinese basic', 'chineseLog');
+}
+function testChineseSpeakWithVoice() {
+  const voices = speechSynthesis.getVoices();
+  const zh = voices.find(v => v.lang.startsWith('zh'));
+  const name = zh ? zh.name : 'Tingting';
+  doSpeak('你好世界', 'zh-CN', 'Chinese+voice', 'chineseLog', { voiceName: name });
+}
+function testChineseNoCancel() {
+  doSpeak('你好朋友', 'zh-CN', 'Chinese no cancel', 'chineseLog', { cancel: false });
+}
+
+// --- Step 5: Warmup ---
+function warmupEmpty() {
+  const s = 'warmupLog';
+  slog(s, 'Warmup: empty string, vol=0', 'info');
+  const synth = speechSynthesis;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance('');
+  u.volume = 0;
+  u.rate = 1;
+  u.onstart = () => slog(s, '  warmup onstart', 'ok');
+  u.onend = () => slog(s, '  warmup onend', 'ok');
+  u.onerror = (e) => slog(s, `  warmup onerror: ${e.error}`, 'err');
+  synth.speak(u);
+  window.__warmupU = u;
+}
+function warmupSpace() {
+  const s = 'warmupLog';
+  slog(s, 'Warmup: space " ", vol=0', 'info');
+  const synth = speechSynthesis;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(' ');
+  u.volume = 0;
+  u.rate = 1;
+  u.onstart = () => slog(s, '  warmup onstart', 'ok');
+  u.onend = () => slog(s, '  warmup onend', 'ok');
+  u.onerror = (e) => slog(s, `  warmup onerror: ${e.error}`, 'err');
+  synth.speak(u);
+  window.__warmupU = u;
+}
+function warmupDot() {
+  const s = 'warmupLog';
+  slog(s, 'Warmup: dot ".", vol=0.01', 'info');
+  const synth = speechSynthesis;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance('.');
+  u.volume = 0.01;
+  u.rate = 1;
+  u.onstart = () => slog(s, '  warmup onstart', 'ok');
+  u.onend = () => slog(s, '  warmup onend', 'ok');
+  u.onerror = (e) => slog(s, `  warmup onerror: ${e.error}`, 'err');
+  synth.speak(u);
+  window.__warmupU = u;
+}
+function warmupReal() {
+  const s = 'warmupLog';
+  slog(s, 'Warmup: "a", vol=0.01', 'info');
+  const synth = speechSynthesis;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance('a');
+  u.volume = 0.01;
+  u.rate = 1;
+  u.onstart = () => slog(s, '  warmup onstart', 'ok');
+  u.onend = () => slog(s, '  warmup onend', 'ok');
+  u.onerror = (e) => slog(s, `  warmup onerror: ${e.error}`, 'err');
+  synth.speak(u);
+  window.__warmupU = u;
+}
+function speakAfterWarmup() {
+  doSpeak('warmup worked', 'en-US', 'Post-warmup speak', 'warmupLog');
+}
+
+// --- Step 6: Gesture tests ---
+function testDirectGesture() {
+  // This is called directly in onclick — should be in gesture context
+  const s = 'gestureLog';
+  slog(s, 'Direct gesture test', 'info');
+  const synth = speechSynthesis;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance('direct gesture');
+  u.lang = 'en-US';
+  u.volume = 1;
+  u.rate = 0.85;
+  u.onstart = () => slog(s, '  ✓ direct: onstart', 'ok');
+  u.onend = () => slog(s, '  ✓ direct: onend', 'ok');
+  u.onerror = (e) => slog(s, `  ✗ direct: onerror ${e.error}`, 'err');
+  synth.speak(u);
+  window.__gestureU = u;
+}
+function testDelayedGesture() {
+  const s = 'gestureLog';
+  slog(s, 'setTimeout(0) gesture test', 'info');
+  setTimeout(() => {
+    const synth = speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance('delayed gesture');
+    u.lang = 'en-US';
+    u.volume = 1;
+    u.rate = 0.85;
+    u.onstart = () => slog(s, '  ✓ delayed: onstart', 'ok');
+    u.onend = () => slog(s, '  ✓ delayed: onend', 'ok');
+    u.onerror = (e) => slog(s, `  ✗ delayed: onerror ${e.error}`, 'err');
+    synth.speak(u);
+    window.__gestureU = u;
+  }, 0);
+}
+function testPromiseGesture() {
+  const s = 'gestureLog';
+  slog(s, 'Promise.resolve() gesture test', 'info');
+  Promise.resolve().then(() => {
+    const synth = speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance('promise gesture');
+    u.lang = 'en-US';
+    u.volume = 1;
+    u.rate = 0.85;
+    u.onstart = () => slog(s, '  ✓ promise: onstart', 'ok');
+    u.onend = () => slog(s, '  ✓ promise: onend', 'ok');
+    u.onerror = (e) => slog(s, `  ✗ promise: onerror ${e.error}`, 'err');
+    synth.speak(u);
+    window.__gestureU = u;
+  });
+}
+
+// Auto-run environment check on load
+window.addEventListener('load', () => {
+  log('Page loaded', 'info');
+  log(`UA: ${navigator.userAgent}`, 'info');
+  log(`speechSynthesis: ${!!window.speechSynthesis}`, window.speechSynthesis ? 'ok' : 'err');
+  // Try to trigger voice loading
+  if (window.speechSynthesis) {
+    speechSynthesis.getVoices();
+    speechSynthesis.addEventListener('voiceschanged', () => {
+      log(`voiceschanged fired, ${speechSynthesis.getVoices().length} voices`, 'ok');
+    });
+  }
+});
+</script>
+</body>
+</html>
