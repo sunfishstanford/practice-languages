@@ -1,14 +1,14 @@
 {
   "files": {
-    "main.css": "/practice-languages/static/css/main.ff42126e.css",
-    "main.js": "/practice-languages/static/js/main.7d654f00.js",
+    "main.css": "/practice-languages/static/css/main.237a1c28.css",
+    "main.js": "/practice-languages/static/js/main.edd0e110.js",
     "service-worker.js": "/practice-languages/service-worker.js",
     "index.html": "/practice-languages/index.html",
-    "main.ff42126e.css.map": "/practice-languages/static/css/main.ff42126e.css.map",
-    "main.7d654f00.js.map": "/practice-languages/static/js/main.7d654f00.js.map"
+    "main.237a1c28.css.map": "/practice-languages/static/css/main.237a1c28.css.map",
+    "main.edd0e110.js.map": "/practice-languages/static/js/main.edd0e110.js.map"
   },
   "entrypoints": [
-    "static/css/main.ff42126e.css",
-    "static/js/main.7d654f00.js"
+    "static/css/main.237a1c28.css",
+    "static/js/main.edd0e110.js"
   ]
 }
