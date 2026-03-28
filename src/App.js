@@ -4,6 +4,7 @@ import Quiz from './components/Quiz';
 import Settings from './components/Settings';
 import History from './components/History';
 import Browse from './components/Browse';
+import About from './components/About';
 import { languageList, getLanguage } from './languages';
 import { DEFAULT_LEVEL } from './levels';
 import { warmUpTTS } from './audio';
@@ -15,22 +16,32 @@ import {
   migrateOldStorage
 } from './storage';
 
-function getDefaultSettings() {
-  return {
+function getDefaultSettings(language) {
+  const defaults = {
     questionsPerSession: 10,
     showRomanization: true,
     listeningMode: 'off',
-    includePhonetics: false,
     level: DEFAULT_LEVEL
   };
+  if (language && language.categories.some(c => c.phonetic)) {
+    defaults.quizMode = language.categories.find(c => c.phonetic).id;
+  }
+  return defaults;
 }
 
-function migrateSettings(saved) {
-  if (!saved) return getDefaultSettings();
+function migrateSettings(saved, language) {
+  if (!saved) return getDefaultSettings(language);
   // Migrate old includeListening boolean → listeningMode
   if ('includeListening' in saved && !('listeningMode' in saved)) {
     saved.listeningMode = saved.includeListening ? 'mixed' : 'off';
     delete saved.includeListening;
+  }
+  // Migrate old includePhonetics → quizMode
+  if ('includePhonetics' in saved) {
+    delete saved.includePhonetics;
+  }
+  if (language && language.categories.some(c => c.phonetic) && !saved.quizMode) {
+    saved.quizMode = language.categories.find(c => c.phonetic).id;
   }
   if (saved.level) return saved;
   // Old format with enabledCategories or includeHiragana — migrate to default level
@@ -49,7 +60,7 @@ function App() {
   const [settings, setSettings] = useState(() => {
     const lang = getLanguage(getActiveLanguageId());
     const saved = getLanguageSettings(lang.id);
-    return migrateSettings(saved);
+    return migrateSettings(saved, lang);
   });
 
   const ttsWarmedUp = useRef(false);
@@ -94,7 +105,7 @@ function App() {
 
     // Load new language's settings
     const saved = getLanguageSettings(newId);
-    const newSettings = migrateSettings(saved);
+    const newSettings = migrateSettings(saved, newLang);
     setSettings(newSettings);
   };
 
@@ -129,6 +140,12 @@ function App() {
         >
           History
         </button>
+        <button
+          className={currentPage === 'about' ? 'active' : ''}
+          onClick={() => setCurrentPage('about')}
+        >
+          About
+        </button>
       </nav>
 
       <main className="App-main">
@@ -145,6 +162,7 @@ function App() {
           />
         )}
         {currentPage === 'history' && <History language={language} />}
+        {currentPage === 'about' && <About />}
       </main>
     </div>
   );

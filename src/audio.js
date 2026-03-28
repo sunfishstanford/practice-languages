@@ -45,6 +45,10 @@ function findVoice(lang, preferredNames) {
   // If preferred voice names are specified, try each in priority order
   if (preferredNames && preferredNames.length > 0) {
     for (const name of preferredNames) {
+      // Try exact name match first (for user-selected voices)
+      const exact = langVoices.find(v => v.name === name);
+      if (exact) return exact;
+      // Fall back to substring match (for language-config preferences)
       const match = langVoices.find(v =>
         v.name.toLowerCase().includes(name.toLowerCase())
       );
@@ -134,6 +138,13 @@ export function warmUpTTS() {
   utterance.volume = 0.01;
   utterance.rate = 2;
   synth.speak(utterance);
+}
+
+export function getVoicesForLang(lang) {
+  const fresh = window.speechSynthesis.getVoices();
+  if (fresh.length > 0) cachedVoices = fresh;
+  const prefix = lang.split('-')[0];
+  return cachedVoices.filter(v => v.lang === lang || v.lang.startsWith(prefix));
 }
 
 export function isTTSSupported() {

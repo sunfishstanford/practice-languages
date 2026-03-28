@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { resetLanguageData } from '../storage';
-import { isTTSSupported } from '../audio';
+import { isTTSSupported, getVoicesForLang } from '../audio';
 import { LEVEL_LIST, DEFAULT_LEVEL } from '../levels';
 import './Settings.css';
 
@@ -9,6 +9,37 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
     updateSettings({ ...settings, ...changes });
   };
 
+  const hasPhonetic = language.categories.some(c => c.phonetic);
+  const phoneticCats = language.categories.filter(c => c.phonetic);
+  const nonPhoneticCats = language.categories.filter(c => !c.phonetic);
+  const mixValue = phoneticCats.map(c => c.id).join('+');
+  const isPhoneticMode = hasPhonetic && settings.quizMode &&
+    settings.quizMode.split('+').every(id =>
+      language.categories.find(c => c.id === id)?.phonetic
+    );
+
+  const [availableVoices, setAvailableVoices] = useState([]);
+
+  useEffect(() => {
+    if (!isTTSSupported()) return;
+    const refresh = () => {
+      const voices = getVoicesForLang(language.speechLang);
+      if (voices.length > 0) setAvailableVoices(voices);
+    };
+    refresh();
+    window.speechSynthesis.addEventListener('voiceschanged', refresh);
+    // Polling fallback — some browsers never fire voiceschanged
+    let attempts = 0;
+    const poll = setInterval(() => {
+      refresh();
+      if (++attempts >= 20) clearInterval(poll);
+    }, 250);
+    return () => {
+      clearInterval(poll);
+      window.speechSynthesis.removeEventListener('voiceschanged', refresh);
+    };
+  }, [language.speechLang]);
+
   const handleReset = () => {
     const confirmed = window.confirm(
       `Are you sure you want to reset all ${language.name} data? This will clear your history and incorrect question tracking.`
@@ -16,13 +47,16 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
 
     if (confirmed) {
       resetLanguageData(language.id);
-      updateSettings({
+      const defaults = {
         questionsPerSession: 10,
         showRomanization: true,
         listeningMode: 'off',
-        includePhonetics: false,
         level: DEFAULT_LEVEL
-      });
+      };
+      if (hasPhonetic) {
+        defaults.quizMode = phoneticCats[0].id;
+      }
+      updateSettings(defaults);
       alert(`All ${language.name} data has been reset!`);
     }
   };
@@ -64,7 +98,54 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
         </select>
       </div>
 
-      {language.hasRomanization && (
+      {hasPhonetic && (
+        <div className="setting-item">
+          <label className="setting-section-label">Quiz topic:</label>
+          <div className="radio-group">
+            {phoneticCats.map(cat => (
+              <label key={cat.id} htmlFor={`mode-${cat.id}`}>
+                <input
+                  type="radio"
+                  id={`mode-${cat.id}`}
+                  name="quizMode"
+                  value={cat.id}
+                  checked={settings.quizMode === cat.id}
+                  onChange={() => update({ quizMode: cat.id })}
+                />
+                {cat.name}
+              </label>
+            ))}
+            {phoneticCats.length > 1 && (
+              <label htmlFor="mode-mix">
+                <input
+                  type="radio"
+                  id="mode-mix"
+                  name="quizMode"
+                  value={mixValue}
+                  checked={settings.quizMode === mixValue}
+                  onChange={() => update({ quizMode: mixValue })}
+                />
+                Mix ({phoneticCats.map(c => c.name).join(' & ')})
+              </label>
+            )}
+            {nonPhoneticCats.map(cat => (
+              <label key={cat.id} htmlFor={`mode-${cat.id}`}>
+                <input
+                  type="radio"
+                  id={`mode-${cat.id}`}
+                  name="quizMode"
+                  value={cat.id}
+                  checked={settings.quizMode === cat.id}
+                  onChange={() => update({ quizMode: cat.id })}
+                />
+                {cat.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(!hasPhonetic || !isPhoneticMode) && language.hasRomanization && (
         <div className="setting-item">
           <label htmlFor="show-romanization">
             <input
@@ -78,7 +159,7 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
         </div>
       )}
 
-      {isTTSSupported() && (
+      {(!hasPhonetic || !isPhoneticMode) && isTTSSupported() && (
         <div className="setting-item">
           <label className="setting-section-label">Listening questions:</label>
           <div className="radio-group">
@@ -103,38 +184,42 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
         </div>
       )}
 
-      {language.categories.some(c => c.phonetic) && (
+      {isTTSSupported() && availableVoices.length > 1 && (
         <div className="setting-item">
-          <label htmlFor="include-phonetics">
-            <input
-              type="checkbox"
-              id="include-phonetics"
-              checked={settings.includePhonetics ?? false}
-              onChange={(e) => update({ includePhonetics: e.target.checked })}
-            />
-            Include {language.categories.filter(c => c.phonetic).map(c => c.name).join(' & ')} at all levels
-          </label>
+          <label htmlFor="voice-select">Voice:</label>
+          <select
+            id="voice-select"
+            value={settings.selectedVoice ?? ''}
+            onChange={(e) => update({ selectedVoice: e.target.value || undefined })}
+          >
+            <option value="">Default</option>
+            {availableVoices.map(v => (
+              <option key={v.name} value={v.name}>{v.name}</option>
+            ))}
+          </select>
         </div>
       )}
 
-      <div className="setting-item">
-        <label className="setting-section-label">Difficulty level:</label>
-        <div className="radio-group">
-          {LEVEL_LIST.map(lvl => (
-            <label key={lvl.id} htmlFor={`level-${lvl.id}`}>
-              <input
-                type="radio"
-                id={`level-${lvl.id}`}
-                name="level"
-                value={lvl.id}
-                checked={settings.level === lvl.id}
-                onChange={() => update({ level: lvl.id })}
-              />
-              {lvl.name}
-            </label>
-          ))}
+      {(!hasPhonetic || !isPhoneticMode) && (
+        <div className="setting-item">
+          <label className="setting-section-label">Difficulty level:</label>
+          <div className="radio-group">
+            {LEVEL_LIST.map(lvl => (
+              <label key={lvl.id} htmlFor={`level-${lvl.id}`}>
+                <input
+                  type="radio"
+                  id={`level-${lvl.id}`}
+                  name="level"
+                  value={lvl.id}
+                  checked={settings.level === lvl.id}
+                  onChange={() => update({ level: lvl.id })}
+                />
+                {lvl.name}
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="settings-buttons">
         <button className="reset-btn" onClick={handleReset}>
@@ -142,17 +227,6 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
         </button>
       </div>
 
-      <div className="settings-info">
-        <h3>About</h3>
-        <p>
-          This app helps you practice {language.name} through interactive quizzes.
-          Questions you answer incorrectly will be emphasized in future sessions
-          to help you learn.
-        </p>
-        <p>
-          The app works offline once loaded, so you can practice anywhere!
-        </p>
-      </div>
     </div>
   );
 }

@@ -1,0 +1,91 @@
+.about-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.about-container h2 {
+  font-size: 32px;
+  color: #333;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.about-section {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.about-section h3 {
+  font-size: 26px;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.about-section p {
+  font-size: 20px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.about-version {
+  font-size: 22px;
+  font-weight: 600;
+  color: #4a90e2;
+  margin-bottom: 16px;
+}
+
+.changelog-entry {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.changelog-entry:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.changelog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.changelog-version {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+}
+
+.changelog-date {
+  font-size: 18px;
+  color: #999;
+}
+
+.changelog-entry ul {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.changelog-entry li {
+  font-size: 20px;
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 600px) {
+  .about-container h2 {
+    font-size: 28px;
+  }
+
+  .about-section h3 {
+    font-size: 24px;
+  }
+}

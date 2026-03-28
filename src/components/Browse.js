@@ -3,39 +3,54 @@ import { speak, isTTSSupported } from '../audio';
 import './Browse.css';
 
 function Browse({ language, settings }) {
-  const visibleCategories = language.categories.filter(cat =>
-    (settings.includePhonetics && cat.phonetic) ||
-    cat.data.some(item => item.level === settings.level)
-  );
+  const hasPhonetic = language.categories.some(c => c.phonetic);
+  const selectedIds = (hasPhonetic && settings.quizMode)
+    ? settings.quizMode.split('+')
+    : null;
+
+  const visibleCategories = language.categories.filter(cat => {
+    if (selectedIds) {
+      return selectedIds.includes(cat.id);
+    }
+    return cat.data.some(item => item.level === settings.level);
+  });
 
   const [activeCategory, setActiveCategory] = useState(language.categories[0]?.id || '');
 
   useEffect(() => {
-    const visible = language.categories.filter(cat =>
-      (settings.includePhonetics && cat.phonetic) ||
-      cat.data.some(item => item.level === settings.level)
-    );
+    const ids = (hasPhonetic && settings.quizMode)
+      ? settings.quizMode.split('+')
+      : null;
+    const visible = language.categories.filter(cat => {
+      if (ids) {
+        return ids.includes(cat.id);
+      }
+      return cat.data.some(item => item.level === settings.level);
+    });
     if (!visible.find(cat => cat.id === activeCategory)) {
       setActiveCategory(visible[0]?.id || '');
     }
-  }, [settings.level, settings.includePhonetics, language, activeCategory]);
+  }, [settings.level, settings.quizMode, language, activeCategory, hasPhonetic]);
 
   const currentCategory = language.categories.find(cat => cat.id === activeCategory);
   const currentData = currentCategory
-    ? (settings.includePhonetics && currentCategory.phonetic
+    ? (currentCategory.phonetic
         ? currentCategory.data
         : currentCategory.data.filter(item => item.level === settings.level))
     : [];
 
   const handleSpeak = (text) => {
+    const preferredVoices = settings.selectedVoice
+      ? [settings.selectedVoice]
+      : language.preferredVoices;
     speak(text, language.speechLang, {
       rate: language.speechRate,
-      preferredVoices: language.preferredVoices,
+      preferredVoices,
     }).catch(() => {});
   };
 
   const renderGridRows = (category) => {
-    const filteredData = (settings.includePhonetics && category.phonetic)
+    const filteredData = category.phonetic
       ? category.data
       : category.data.filter(item => item.level === settings.level);
     const rows = category.gridRows(filteredData);
@@ -96,7 +111,7 @@ function Browse({ language, settings }) {
 
       <div className="category-tabs">
         {visibleCategories.map(category => {
-          const count = (settings.includePhonetics && category.phonetic)
+          const count = category.phonetic
             ? category.data.length
             : category.data.filter(item => item.level === settings.level).length;
           return (

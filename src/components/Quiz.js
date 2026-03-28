@@ -11,20 +11,31 @@ function Quiz({ settings, language }) {
   const [score, setScore] = useState(0);
   const [incorrectQuestions, setIncorrectQuestions] = useState([]);
   const [sessionComplete, setSessionComplete] = useState(false);
+  const [showDictionary, setShowDictionary] = useState(false);
   const feedbackRef = useRef(null);
 
   const getFilteredData = useCallback(() => {
     let data = [];
-    language.categories.forEach(cat => {
-      if (settings.includePhonetics && cat.phonetic) {
-        data = [...data, ...cat.data];
-      } else {
-        const filtered = cat.data.filter(item => item.level === settings.level);
-        data = [...data, ...filtered];
-      }
-    });
+    const hasPhonetic = language.categories.some(c => c.phonetic);
+
+    if (hasPhonetic && settings.quizMode) {
+      const selectedIds = settings.quizMode.split('+');
+      language.categories.forEach(cat => {
+        if (selectedIds.includes(cat.id)) {
+          if (cat.phonetic) {
+            data = [...data, ...cat.data];
+          } else {
+            data = [...data, ...cat.data.filter(item => item.level === settings.level)];
+          }
+        }
+      });
+    } else {
+      language.categories.forEach(cat => {
+        data = [...data, ...cat.data.filter(item => item.level === settings.level)];
+      });
+    }
     return data;
-  }, [language, settings.level, settings.includePhonetics]);
+  }, [language, settings.level, settings.quizMode]);
 
   const startNewSession = useCallback(() => {
     const previouslyIncorrect = getIncorrectQuestions(language.id);
@@ -184,6 +195,7 @@ function Quiz({ settings, language }) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
       setShowFeedback(false);
+      setShowDictionary(false);
     } else {
       finishSession();
     }
@@ -202,13 +214,53 @@ function Quiz({ settings, language }) {
     history.push(sessionData);
     saveQuizHistory(language.id, history);
 
-    saveIncorrectQuestions(language.id, incorrectQuestions);
+    // Accumulate incorrect questions across sessions
+    const previous = getIncorrectQuestions(language.id);
+
+    // Add new incorrect items, then deduplicate (keep latest occurrence)
+    const combined = [...previous, ...incorrectQuestions];
+    const seen = new Set();
+    const deduped = [];
+    for (let i = combined.length - 1; i >= 0; i--) {
+      const key = combined[i].native + '|' + combined[i].categoryId;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.unshift(combined[i]);
+      }
+    }
+
+    // Remove items the user answered correctly this session
+    const correctThisSession = new Set(
+      questions
+        .filter((q, idx) => {
+          const answered = idx < currentQuestionIndex || (idx === currentQuestionIndex);
+          return answered && !incorrectQuestions.some(iq => iq.native === q.item.native && iq.categoryId === q.item.categoryId);
+        })
+        .map(q => q.item.native + '|' + q.item.categoryId)
+    );
+    const afterCorrect = deduped.filter(item => !correctThisSession.has(item.native + '|' + item.categoryId));
+
+    // Age out phonetic categories: keep only most recent 30% * category size
+    const phoneticCats = language.categories.filter(c => c.phonetic);
+    const phoneticTotal = phoneticCats.reduce((sum, c) => sum + c.data.length, 0);
+    const phoneticCap = Math.ceil(phoneticTotal * 0.3);
+    const phoneticIds = new Set(phoneticCats.map(c => c.id));
+
+    const nonPhonetic = afterCorrect.filter(item => !phoneticIds.has(item.categoryId));
+    const phonetic = afterCorrect.filter(item => phoneticIds.has(item.categoryId));
+    // Keep only the most recent entries (end of array = most recent)
+    const cappedPhonetic = phonetic.slice(-phoneticCap);
+
+    saveIncorrectQuestions(language.id, [...nonPhonetic, ...cappedPhonetic]);
   };
 
   const handlePlayAudio = (text) => {
+    const preferredVoices = settings.selectedVoice
+      ? [settings.selectedVoice]
+      : language.preferredVoices;
     speak(text, language.speechLang, {
       rate: language.speechRate,
-      preferredVoices: language.preferredVoices,
+      preferredVoices,
     }).catch(() => {});
   };
 
@@ -237,7 +289,9 @@ function Quiz({ settings, language }) {
 
   const currentQuestion = questions[currentQuestionIndex];
   const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
-  const categoryName = language.categories.find(c => c.id === currentQuestion.item.categoryId)?.name;
+  const currentCategory = language.categories.find(c => c.id === currentQuestion.item.categoryId);
+  const categoryName = currentCategory?.name;
+  const isPhonetic = currentCategory?.phonetic;
 
   return (
     <div className="quiz-container">
@@ -269,7 +323,7 @@ function Quiz({ settings, language }) {
         ) : (
           <>
             <div className="question-text">{currentQuestion.questionText}</div>
-            {settings.showRomanization && language.hasRomanization && currentQuestion.type === 'native-to-english' && (
+            {settings.showRomanization && language.hasRomanization && currentQuestion.type === 'native-to-english' && !language.categories.find(c => c.id === currentQuestion.item.categoryId)?.phonetic && (
               <div className="romaji-text">({currentQuestion.romanization})</div>
             )}
           </>
@@ -312,6 +366,20 @@ function Quiz({ settings, language }) {
             <p className="correct-answer-text">
               Correct answer: {currentQuestion.correctAnswer}
             </p>
+          )}
+          {!isPhonetic && !showDictionary && (
+            <button className="dictionary-btn" onClick={() => setShowDictionary(true)}>
+              Dictionary
+            </button>
+          )}
+          {showDictionary && (
+            <div className="dictionary-entry">
+              <div className="dictionary-native">{currentQuestion.item.native}</div>
+              {language.hasRomanization && currentQuestion.item.romanization && (
+                <div className="dictionary-romanization">{currentQuestion.item.romanization}</div>
+              )}
+              <div className="dictionary-english">{currentQuestion.item.english}</div>
+            </div>
           )}
           <button className="next-btn" onClick={handleNext}>
             {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Finish Session'}
