@@ -184,7 +184,7 @@ function Settings({ settings, updateSettings, language, languages, activeLanguag
         </div>
       )}
 
-      {isTTSSupported() && availableVoices.length > 1 && (
+      {isTTSSupported() && availableVoices.length > 0 && (
         <div className="setting-item">
           <label htmlFor="voice-select">Voice:</label>
           <select

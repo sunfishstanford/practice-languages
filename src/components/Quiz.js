@@ -103,6 +103,7 @@ function Quiz({ settings, language }) {
   };
 
   const createQuestion = (item, availableData, listeningMode) => {
+    const isPhoneticItem = language.categories.find(c => c.id === item.categoryId)?.phonetic;
     const rand = Math.random();
     let direction;
     if (listeningMode === 'only') {
@@ -112,6 +113,10 @@ function Quiz({ settings, language }) {
     } else if (rand < (listeningMode === 'mixed' ? 0.66 : 0.5)) {
       direction = 'native-to-english';
     } else {
+      direction = 'english-to-native';
+    }
+    // For phonetic items, show romaji as text instead of audio
+    if (isPhoneticItem && direction === 'listening') {
       direction = 'english-to-native';
     }
 
